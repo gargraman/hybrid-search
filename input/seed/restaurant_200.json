@@ -1,0 +1,77 @@
+{
+  "restaurant": {
+    "name": "Middle_Eastern Table 200",
+    "address": "725 Lakeview Ave, Philadelphia, PA 14931",
+    "rating": 4.4,
+    "review_count": 2127,
+    "on_time_rate": "99%",
+    "delivery_fee": 42.76,
+    "delivery_minimum": 186.62,
+    "delivery_hours": {
+      "mon_sun": "11am\u20138pm"
+    },
+    "takeout_hours": {
+      "mon_sun": "11am\u20139pm"
+    }
+  },
+  "menu": {
+    "grills": [
+      {
+        "name": "Beef Kofta",
+        "price": 13.5
+      },
+      {
+        "name": "Lamb Kabob",
+        "price": 14.75
+      },
+      {
+        "name": "Chicken Kabob",
+        "price": 13.25
+      }
+    ],
+    "mezze": [
+      {
+        "name": "Hummus Trio",
+        "price": 8.75
+      },
+      {
+        "name": "Labneh",
+        "price": 6.75
+      }
+    ],
+    "wraps": [
+      {
+        "name": "Beef Shawarma Wrap",
+        "price": 11.5
+      },
+      {
+        "name": "Falafel Wrap",
+        "price": 10.25
+      }
+    ],
+    "sides": [
+      {
+        "name": "Roasted Cauliflower",
+        "price": 5.75
+      },
+      {
+        "name": "Turmeric Rice",
+        "price": 4.75
+      }
+    ],
+    "desserts": [
+      {
+        "name": "Pistachio Baklava",
+        "price": 4.75
+      },
+      {
+        "name": "Semolina Cake",
+        "price": 4.5
+      }
+    ]
+  },
+  "about": {
+    "on_ezCater_since": "February 26, 2019",
+    "description": "Fast-casual concept focused on fresh, made-to-order dishes for modern teams."
+  }
+}
