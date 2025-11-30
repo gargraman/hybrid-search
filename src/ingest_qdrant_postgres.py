@@ -17,8 +17,9 @@ async def ingest():
     await create_tables()
     create_collection(COLLECTION_NAME, VECTOR_SIZE)
     input_dir = Path("input")
-    for file in input_dir.glob("*.json"):
-        with open(file, "r") as f:
+    json_files = sorted(input_dir.rglob("*.json"))
+    for file in json_files:
+        with file.open("r", encoding="utf-8") as f:
             data = json.load(f)
         restaurant_data = RestaurantData(**data)
         rest = restaurant_data.restaurant
@@ -40,6 +41,10 @@ async def ingest():
                     "vector": embedding,
                     "payload": {
                         "restaurant_id": rest_id,
+                        "restaurant_name": rest.name,
+                        "address": rest.address,
+                        "rating": rest.rating,
+                        "review_count": rest.review_count,
                         "category": category,
                         "name": item.name,
                         "description": getattr(item, "description", None),

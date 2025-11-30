@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: hybrid-search-api
+    depends_on:
+      - postgres
+      - qdrant
+      - elasticsearch
+    environment:
+      POSTGRES_DSN: postgresql://postgres:postgres@postgres:5432/restaurantdb
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      ES_HOST: elasticsearch
+      ES_PORT: 9200
+      ES_SCHEME: http
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: hybrid-postgres
+    environment:
+      POSTGRES_DB: restaurantdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  qdrant:
+    image: qdrant/qdrant:v1.8.2
+    container_name: hybrid-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    container_name: hybrid-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  es_data:
