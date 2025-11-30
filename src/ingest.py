@@ -1,3 +1,19 @@
+def main():
+    input_dir = Path("input")
+    for file in input_dir.glob("*.json"):
+        data = load_restaurant_data(str(file))
+        items = flatten_menu_items(data)
+        # For production semantic ingestion, use src/ingest_qdrant_postgres.py
+        ingest_to_whoosh(items)
+        try:
+            ingest_to_elasticsearch(items)
+        except Exception as e:
+            print(f"Elasticsearch not available: {e}")
+    print("Ingestion complete")
+
+
+if __name__ == "__main__":
+    main()
 import json
 import os
 from pathlib import Path
