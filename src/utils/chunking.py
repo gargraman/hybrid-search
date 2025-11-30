@@ -1,5 +1,7 @@
-from docling import Document
-from typing import List, Dict
+import json
+from pathlib import Path
+from docling import Document  # type: ignore
+from typing import List, Dict, Union
 
 # Robust chunking for nested restaurant JSON
 
@@ -25,6 +27,22 @@ def chunk_restaurant_json(json_data: Dict) -> List[Dict]:
             chunks.append(chunk)
     return chunks
 
+
+def chunk_restaurant_directory(input_path: Union[str, Path]) -> List[Dict]:
+    path = Path(input_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Input path not found: {path}")
+
+    aggregated: List[Dict] = []
+    for json_file in path.rglob("*.json"):
+        with json_file.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        file_chunks = chunk_restaurant_json(data)
+        for chunk in file_chunks:
+            chunk["metadata"]["source_file"] = str(json_file)
+        aggregated.extend(file_chunks)
+    return aggregated
+
 # Validation function to ensure no cross-matching and all context is present
 def validate_chunks(chunks: List[Dict]) -> bool:
     for chunk in chunks:
@@ -37,10 +55,7 @@ def validate_chunks(chunks: List[Dict]) -> bool:
 
 # Example usage
 if __name__ == "__main__":
-    import json
-    with open("input/restaurant1.json", "r") as f:
-        data = json.load(f)
-    chunks = chunk_restaurant_json(data)
+    chunks = chunk_restaurant_directory(Path("input"))
     assert validate_chunks(chunks), "Chunk validation failed!"
     for chunk in chunks[:2]:
         print(chunk)
