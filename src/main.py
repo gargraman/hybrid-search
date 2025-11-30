@@ -9,9 +9,11 @@ import time
 try:
     from src.agents.orchestrator import Orchestrator
     USE_ORCHESTRATOR = True
+    hybrid_search_func = None
 except Exception as e:
     logger.warning(f"Orchestrator not available: {e}. Using simple hybrid search.")
     USE_ORCHESTRATOR = False
+    from src.search.hybrid_search import hybrid_search as hybrid_search_func
 
 app = FastAPI(title="AI-Powered Hybrid Culinary Search Engine")
 
@@ -44,15 +46,35 @@ async def search(request: SearchRequest):
             logger.info(f"Search query: {request.query}, top_k: {request.top_k}, results: {len(results)}")
             return results
         else:
-            from src.search.hybrid_search import hybrid_search
-            results = hybrid_search(request.query, request.top_k)
+            results = hybrid_search_func(request.query, request.top_k)
             logger.info(f"Search query (simple): {request.query}, top_k: {request.top_k}, results: {len(results)}")
-            return [SearchResult(id=r['id'], score=r['score'], metadata=r['metadata'], relevance_score=r['score']*10) for r in results]
+            # Return dict compatible with SearchResult schema for proper serialization
+            return [
+                {
+                    "id": r['id'],
+                    "score": r['score'],
+                    "metadata": r['metadata'],
+                    "relevance_score": r['score'] * 10
+                }
+                for r in results
+            ]
     except Exception as e:
         logger.error(f"Search error: {e}")
-        from src.search.hybrid_search import hybrid_search
-        results = hybrid_search(request.query, request.top_k)
-        return [SearchResult(id=r['id'], score=r['score'], metadata=r['metadata'], relevance_score=r['score']*10) for r in results]
+        # Fallback to simple search if orchestrator fails at runtime
+        if hybrid_search_func is None:
+            from src.search.hybrid_search import hybrid_search as fallback_search
+        else:
+            fallback_search = hybrid_search_func
+        results = fallback_search(request.query, request.top_k)
+        return [
+            {
+                "id": r['id'],
+                "score": r['score'],
+                "metadata": r['metadata'],
+                "relevance_score": r['score'] * 10
+            }
+            for r in results
+        ]
     finally:
         logger.info(f"Search latency: {time.time() - start:.3f}s")
 
