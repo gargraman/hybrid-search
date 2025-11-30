@@ -1,78 +1,108 @@
 # AI-Powered Hybrid Culinary Search Engine POC
 
-This is a proof-of-concept implementation of an AI-powered hybrid search engine for restaurant menus using natural language queries.
+This repository is a developer-focused proof-of-concept for an AI-powered hybrid search engine for restaurant menus, supporting natural language queries and scalable, production-ready architecture.
 
 ## Features
 
-- Hybrid search combining semantic (vector) + keyword retrieval
-- Multi-agent AI architecture using BeeAI Framework:
-  - QueryParserAgent: Parses natural language queries into filters
-  - SearchAgent: Performs hybrid search with filtering
-  - RankingAgent: LLM-powered relevance ranking
-  - Orchestrator: Coordinates agent workflow
-- Quality gates with LLM verification at each stage
-- Cost-effective LLM strategy (DeepSeek primary, OpenAI fallback)
-- JSON-based restaurant data ingestion
-- RESTful API with FastAPI
+- True hybrid search: semantic (vector, Qdrant) + keyword (Whoosh, Elasticsearch)
+- Multi-agent orchestration (BeeAI):
+  - QueryParserAgent: LLM-powered query parsing
+  - SearchAgent: Hybrid search with context from docling-parsed JSON
+  - QualityAgent: LLM-based result validation
+  - VerificationAgent: LLM-based business rule compliance
+  - RankingAgent: LLM-powered relevance scoring
+  - Orchestrator: Full agent workflow coordination
+- Quality gates at every stage
+- Monitoring: Prometheus metrics, health endpoints, structured logging
+- Scalable DB architecture: Qdrant for vectors, PostgreSQL for metadata
+- RESTful API (FastAPI) with OpenAPI docs
+- Secure, configurable, and ready for production deployment
 
-## Setup
+## Developer Setup
 
-1. Install dependencies:
+1. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. Set environment variables (optional):
-   - `DEEPSEEK_API_KEY` for DeepSeek LLM
-   - `OPENAI_API_KEY` for OpenAI GPT
+2. **Configure environment variables:**
+   - `DEEPSEEK_API_KEY` or `OPENAI_API_KEY` for LLMs
+   - `QDRANT_HOST`, `QDRANT_PORT`, `QDRANT_API_KEY` for Qdrant
+   - `POSTGRES_DSN` for PostgreSQL
    - `ES_HOST`, `ES_PORT`, `ES_SCHEME` for Elasticsearch
 
-3. Ingest data:
+3. **Start Qdrant and PostgreSQL:**
+   - Qdrant: [Docker quickstart](https://qdrant.tech/documentation/quick-start/)
+   - PostgreSQL: Use Docker or local install
+
+4. **Ingest data:**
    ```bash
-   python src/ingest.py
+   python src/ingest_qdrant_postgres.py
    ```
 
-4. Run the API:
+5. **Run the API:**
    ```bash
    python src/main.py
    ```
 
-5. Test search:
+6. **Monitor health and metrics:**
+   - Health: [GET] `/health`
+   - Metrics: [GET] `/metrics` (Prometheus scrape)
+   - API docs: [GET] `/docs`
+
+7. **Test search:**
    ```bash
    curl -X POST "http://localhost:8000/search" -H "Content-Type: application/json" -d '{"query": "vegan tacos under 15"}'
    ```
 
-## Architecture
+## Architecture Overview
 
-- **Ingestion**: Loads JSON restaurant data, flattens menu items, indexes in Chroma (vectors), Whoosh (keywords), Elasticsearch (keywords)
-- **Multi-Agent System**:
-  - Orchestrator coordinates the workflow
-  - QueryParserAgent uses LLM to extract keywords and filters
-  - SearchAgent performs filtered hybrid search
-  - RankingAgent applies LLM-based relevance scoring
-- **API**: FastAPI endpoint with async agent orchestration
+- **Ingestion:**
+  - Parses and chunks JSON input with docling
+  - Stores vectors in Qdrant, metadata in PostgreSQL
+- **Multi-Agent System:**
+  - Orchestrator coordinates QueryParser, Search, Quality, Verification, and Ranking agents
+  - Each agent uses LLMs for its specialized task
+- **Search:**
+  - Semantic search via Qdrant (sentence-transformers embeddings)
+  - Keyword search via Whoosh/Elasticsearch
+  - Results merged and filtered by agents
+- **API:**
+  - FastAPI async endpoints, OpenAPI docs, health/metrics
+- **Monitoring:**
+  - Prometheus metrics, Loguru logging
+- **Security:**
+  - Input validation, ready for OAuth2/JWT integration
 
 ## Technologies
 
 - Python 3.13
-- ChromaDB for vector search (with deterministic hash-based embeddings for POC)
-- Whoosh for local keyword search
-- Elasticsearch for advanced keyword search
-- FastAPI for API
-- BeeAI Framework for multi-agent architecture
-- DeepSeek/OpenAI for LLMs
+- Qdrant (vector DB)
+- PostgreSQL (metadata)
+- Whoosh, Elasticsearch (keyword search)
+- FastAPI (API)
+- BeeAI Framework (multi-agent)
+- DeepSeek/OpenAI (LLMs)
+- Docling (JSON parsing)
+- Prometheus, Loguru (monitoring/logging)
 
-## Notes
+## Developer Notes
 
-- **Embeddings**: Using deterministic hash-based embeddings for POC due to SSL/network constraints preventing model downloads. For production, replace with sentence-transformers or similar for real semantic embeddings.
-- **LLMs**: Requires API keys for DeepSeek or OpenAI to enable query parsing and ranking.
-- **Elasticsearch**: Assumes AWS setup; falls back gracefully if unavailable.
-- **SSL**: Attempted to disable SSL verification for model downloads, but environment issues persist; use proper certificates or local models in production.
+- **Embeddings:** Uses sentence-transformers for real semantic search. For local/offline, fallback to deterministic vectors.
+- **LLMs:** All agents use LLMs for parsing, validation, ranking, and verification. Set API keys in your environment.
+- **Config:** All DB and service credentials are environment-driven for security and portability.
+- **Extensibility:** Add new agents, business rules, or data sources easily.
+- **Testing:** Validate chunking, agent outputs, and DB integration with provided utilities.
+- **Production:** Ready for containerization, scaling, and cloud deployment.
 
-## Next Steps
+## Next Steps for Developers
 
-- Implement query parsing with LLMs
-- Add multi-agent orchestration
-- Improve embeddings (use real models)
-- Add filtering and ranking
-- Deploy to production
+- Extend agent logic for domain-specific rules
+- Integrate advanced security (OAuth2/JWT)
+- Add more API endpoints and documentation
+- Automate deployment (Docker, CI/CD)
+- Expand monitoring and alerting
+
+---
+
+**For questions, improvements, or contributions, see the code comments and agent modules. This repo is designed for rapid prototyping and production-grade extension.**

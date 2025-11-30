@@ -1,6 +1,7 @@
 from beeai_framework import Agent, LLM
 from config.settings import settings
 from src.search.hybrid_search import hybrid_search
+from src.utils.docling_input import parse_restaurant_json_with_docling
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
@@ -25,9 +26,11 @@ class SearchAgent(Agent):
             )
         else:
             raise ValueError("No API key set for LLM")
+        # Load LLM context from input JSON via docling
+        self.llm_context = parse_restaurant_json_with_docling("input/restaurant1.json")
         super().__init__(
             llm=llm,
-            instructions="You are a search agent. Perform hybrid search on restaurant data based on keywords and filters."
+            instructions=f"You are a search agent. Use the following restaurant data for context:\n{self.llm_context}\nPerform hybrid search on restaurant data based on keywords and filters."
         )
 
     async def perform_search(self, keywords: str, top_k: int = 10, price_max: Optional[float] = None, dietary: Optional[str] = None, location: Optional[str] = None) -> List[SearchResult]:

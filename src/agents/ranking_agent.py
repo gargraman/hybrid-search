@@ -1,4 +1,5 @@
 from beeai_framework import Agent, LLM
+from openai import OpenAI
 from config.settings import settings
 from pydantic import BaseModel
 from typing import List
@@ -12,39 +13,29 @@ class RankedResult(BaseModel):
 class RankingAgent(Agent):
     def __init__(self):
         if settings.deepseek_api_key:
-            llm = LLM(
-                model="deepseek-chat",
-                api_key=settings.deepseek_api_key,
-                base_url=settings.deepseek_base_url
-            )
+            self.client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
+            self.model = "deepseek-chat"
         elif settings.openai_api_key:
-            llm = LLM(
-                model="gpt-3.5-turbo",
-                api_key=settings.openai_api_key,
-                base_url=settings.openai_base_url
-            )
+            self.client = OpenAI(api_key=settings.openai_api_key, base_url=settings.openai_base_url)
+            self.model = "gpt-3.5-turbo"
         else:
             raise ValueError("No API key set for LLM")
         super().__init__(
-            llm=llm,
-            instructions="You are a ranking agent. Evaluate and rank search results based on relevance to the query."
+            instructions="Rank search results for relevance."
         )
 
     async def rank_results(self, query: str, results: List[dict]) -> List[RankedResult]:
         ranked = []
         for res in results:
-            prompt = f"""
-Evaluate the relevance of this menu item to the query "{query}".
-Menu item: {res['metadata']['text']}
-Price: ${res['metadata']['price']}
-Restaurant: {res['metadata']['restaurant']}
-
-Rate relevance from 0 to 10 (10 being perfect match). Return only the number.
-"""
-            response = await self.run(prompt)
+            prompt = f"Rate relevance of this menu item to query '{query}': {res['metadata']['text']} (Price: ${res['metadata']['price']}) Restaurant: {res['metadata']['restaurant']}\nReturn a number 0-10."
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1
+            )
             try:
-                relevance = float(response.content.strip())
-            except:
+                relevance = float(response.choices[0].message.content.strip())
+            except Exception:
                 relevance = res['score'] * 10  # fallback
             ranked.append(RankedResult(
                 id=res['id'],
