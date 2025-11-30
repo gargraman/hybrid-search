@@ -5,10 +5,12 @@ from whoosh.index import open_dir
 from whoosh.qparser import QueryParser
 from elasticsearch import Elasticsearch
 from typing import List, Dict, Optional
+from sentence_transformers import SentenceTransformer
 
-def get_embedding(text: str) -> List[float]:
-    np.random.seed(hash(text) % 2**32)
-    return np.random.rand(384).tolist()
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def get_embedding(text: str) -> list:
+    return model.encode([text])[0].tolist()
 
 def filter_results(results: List[Dict], price_max: Optional[float] = None, dietary: Optional[str] = None, location: Optional[str] = None) -> List[Dict]:
     filtered = []
@@ -26,7 +28,7 @@ def filter_results(results: List[Dict], price_max: Optional[float] = None, dieta
 def semantic_search(query: str, top_k: int = 10) -> List[Dict]:
     client = chromadb.PersistentClient(path=settings.chroma_path)
     collection = client.get_collection("menu_items")
-    query_embedding = get_embedding(query)
+    query_embedding = model.encode([query])[0].tolist()
     results = collection.query(query_embeddings=[query_embedding], n_results=top_k)
     return [{"id": id, "score": 1 - score, "metadata": meta} for id, score, meta in zip(results["ids"][0], results["distances"][0], results["metadatas"][0])]
 

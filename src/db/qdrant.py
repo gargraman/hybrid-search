@@ -1,11 +1,13 @@
 from qdrant_client import QdrantClient, models
 from config.db_config import QDRANT_HOST, QDRANT_PORT, QDRANT_API_KEY
+from sentence_transformers import SentenceTransformer
 
 client = QdrantClient(
     host=QDRANT_HOST,
     port=QDRANT_PORT,
     api_key=QDRANT_API_KEY
 )
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def create_collection(collection_name: str, vector_size: int = 384):
     client.recreate_collection(
@@ -18,3 +20,6 @@ def upsert_vectors(collection_name: str, points: list):
 
 def search_vectors(collection_name: str, query_vector: list, top_k: int = 10):
     return client.search(collection_name=collection_name, query_vector=query_vector, limit=top_k)
+
+def get_embedding(text: str) -> list:
+    return model.encode([text])[0].tolist()

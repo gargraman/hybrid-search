@@ -16,16 +16,14 @@ class QualityAgent(Agent):
         super().__init__(instructions="Validate and filter search results for relevance, completeness, and safety.")
 
     async def filter_results(self, query: str, results: List[Dict]) -> List[Dict]:
-        # Example: filter out results with missing price or description
-        filtered = [r for r in results if r['metadata'].get('price') and r['metadata'].get('description')]
-        # TODO: Add LLM-based validation for relevance, safety, etc.
-        for r in filtered:
+        filtered = []
+        for r in results:
             prompt = f"Is this menu item relevant and safe for query '{query}'? {r['metadata']['text']} (Price: ${r['metadata']['price']}) Restaurant: {r['metadata']['restaurant']}\nReturn 'yes' or 'no'."
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1
             )
-            if response.choices[0].message.content.strip().lower() != 'yes':
-                filtered.remove(r)
+            if response.choices[0].message.content.strip().lower() == 'yes':
+                filtered.append(r)
         return filtered

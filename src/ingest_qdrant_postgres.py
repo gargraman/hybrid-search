@@ -4,9 +4,14 @@ from src.models.restaurant import RestaurantData
 from src.db.qdrant import create_collection, upsert_vectors
 from src.db.postgres import create_tables, insert_restaurant, insert_menu_item
 import asyncio
+from sentence_transformers import SentenceTransformer
 
 VECTOR_SIZE = 384
 COLLECTION_NAME = "menu_items"
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def get_embedding(text: str) -> list:
+    return model.encode([text])[0].tolist()
 
 async def ingest():
     await create_tables()
@@ -29,8 +34,7 @@ async def ingest():
                     "price": item.price
                 }
                 await insert_menu_item(menu_item)
-                # Dummy embedding for now
-                embedding = [float(hash(item.name + category) % 1000) / 1000 for _ in range(VECTOR_SIZE)]
+                embedding = get_embedding(f"{rest.name} {category} {item.name} {item.description if hasattr(item, 'description') else ''}")
                 points.append({
                     "id": f"{rest.name}_{category}_{item.name}".replace(" ", "_"),
                     "vector": embedding,

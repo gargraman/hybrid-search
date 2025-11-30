@@ -123,6 +123,7 @@ python-dotenv==1.2.1
 python-pptx==1.0.2
 pytz==2025.2
 PyYAML==6.0.3
+qdrant-client>=1.7.0
 rapidocr==3.4.2
 referencing==0.37.0
 regex==2025.11.3

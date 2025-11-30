@@ -16,16 +16,14 @@ class VerificationAgent(Agent):
         super().__init__(instructions="Check search results for factual accuracy and compliance with business rules.")
 
     async def verify_results(self, results: List[Dict]) -> List[Dict]:
-        # Example: verify price is within allowed range
-        verified = [r for r in results if 0 < r['metadata'].get('price', 0) < 1000]
-        # TODO: Add LLM-based verification for business rules
-        for r in verified:
+        verified = []
+        for r in results:
             prompt = f"Is this menu item factually accurate and compliant with business rules? {r['metadata']['text']} (Price: ${r['metadata']['price']}) Restaurant: {r['metadata']['restaurant']}\nReturn 'yes' or 'no'."
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1
             )
-            if response.choices[0].message.content.strip().lower() != 'yes':
-                verified.remove(r)
+            if response.choices[0].message.content.strip().lower() == 'yes':
+                verified.append(r)
         return verified

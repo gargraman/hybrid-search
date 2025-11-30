@@ -11,18 +11,18 @@ async def search_menu_items(query_vector, top_k=10):
     # Qdrant vector search
     results = client.search(collection_name=COLLECTION_NAME, query_vector=query_vector, limit=top_k)
     ids = [point.id for point in results]
-    # Fetch metadata from PostgreSQL
     conn = await asyncpg.connect(POSTGRES_DSN)
     rows = await conn.fetch(
-        'SELECT * FROM menu_items WHERE id = ANY($1::int[])', ids
+        'SELECT * FROM menu_items WHERE id = ANY($1::text[])', ids
     )
     await conn.close()
-    # Merge results
     merged = []
-    for point, row in zip(results, rows):
-        merged.append({
-            "id": point.id,
-            "score": point.score,
-            "metadata": dict(row)
-        })
+    for point in results:
+        row = next((r for r in rows if str(r['id']) == str(point.id)), None)
+        if row:
+            merged.append({
+                "id": point.id,
+                "score": point.score,
+                "metadata": dict(row)
+            })
     return merged
