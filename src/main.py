@@ -1,9 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from pydantic import BaseModel
 from src.agents.orchestrator import Orchestrator
 from typing import List
+from prometheus_client import Counter, Histogram, start_http_server
+from loguru import logger
+import time
 
 app = FastAPI(title="AI-Powered Hybrid Culinary Search Engine")
+
+# Metrics
+SEARCH_REQUESTS = Counter('search_requests_total', 'Total search requests')
+SEARCH_LATENCY = Histogram('search_latency_seconds', 'Search latency in seconds')
+
+# Start Prometheus metrics server
+start_http_server(8001)
 
 class SearchRequest(BaseModel):
     query: str
@@ -16,16 +26,31 @@ class SearchResult(BaseModel):
     relevance_score: float
 
 @app.post("/search", response_model=List[SearchResult])
+@SEARCH_LATENCY.time()
 async def search(request: SearchRequest):
+    SEARCH_REQUESTS.inc()
+    start = time.time()
     try:
         orchestrator = Orchestrator()
         results = await orchestrator.run_search(request.query, request.top_k)
+        logger.info(f"Search query: {request.query}, top_k: {request.top_k}, results: {len(results)}")
         return results
     except Exception as e:
-        # Fallback to basic search
+        logger.error(f"Search error: {e}")
         from src.search.hybrid_search import hybrid_search
         results = hybrid_search(request.query, request.top_k)
         return [SearchResult(id=r['id'], score=r['score'], metadata=r['metadata'], relevance_score=r['score']*10) for r in results]
+    finally:
+        logger.info(f"Search latency: {time.time() - start:.3f}s")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/metrics")
+def metrics():
+    from prometheus_client import generate_latest
+    return Response(generate_latest(), media_type="text/plain")
 
 if __name__ == "__main__":
     import uvicorn
