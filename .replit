@@ -1,0 +1,16 @@
+modules = ["python-3.11"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+POSTGRES_DSN = "${DATABASE_URL}"
+QDRANT_HOST = "localhost"
+QDRANT_PORT = "6333"
+ES_HOST = "localhost"
+ES_PORT = "9200"
+ES_SCHEME = "http"
