@@ -1,0 +1,595 @@
+
+Complete Documentation Package: AI-Powered Hybrid Culinary Search Engine
+Document Index
+I'll generate the following documents for you:
+	•	Product Requirements Document (PRD) - Complete specification
+	•	Technical Design Document (TDD) - Architecture and implementation
+	•	API Reference Documentation - Endpoint specifications
+	•	Deployment Guide - Setup and operations
+	•	Developer Guide - Code examples and patterns
+	•	Testing Strategy Document - QA approach
+	•	Open Source Tools Recommendation - Comprehensive tooling guide
+
+DOCUMENT 1: Product Requirements Document (PRD)
+Product Requirements Document
+AI-Powered Hybrid Culinary Search Engine (POC)
+Version: 3.0 Date: November 30, 2025 Status: Approved for Development
+
+Table of Contents
+	•	Executive Summary
+	•	Business Requirements
+	•	User Stories
+	•	Functional Requirements
+	•	Non-Functional Requirements
+	•	Success Criteria
+	•	Risks and Assumptions
+	•	Timeline and Milestones
+
+1. Executive Summary
+1.1 Product Vision
+Build a multi-agent AI-powered restaurant search engine that provides intelligent, natural language search across restaurant menus using:
+	•	Hybrid Search: Semantic (meaning-based) + Lexical (keyword) retrieval
+	•	Multi-Agent Architecture: Specialized AI agents for parsing, search, ranking, and quality assurance
+	•	Quality Gates: Built-in verification at every stage
+	•	Cost-Effective LLM Strategy: Primary use of DeepSeek ($0.14/1M tokens)
+1.2 Business Objectives
+Objective
+Success Metric
+Timeline
+Validate search relevance
+85%+ user satisfaction in top-3 results
+Week 4 (POC)
+Demonstrate cost-effectiveness
+< $0.01 per search query
+Week 4
+Prove scalability
+Handle 1000+ restaurants, 10K+ menu items
+Week 4
+Enable natural language queries
+90%+ intent classification accuracy
+Week 3
+
+1.3 Target Users
+Primary Users:
+	•	Food enthusiasts searching for specific dishes
+	•	Event planners looking for catering options
+	•	Health-conscious diners with dietary restrictions
+	•	Tourists exploring local cuisine
+Secondary Users:
+	•	Restaurant owners (future: analytics dashboard)
+	•	Data analysts (future: search trend analysis)
+1.4 Key Features (POC Scope)
+✅ Must Have:
+	•	Natural language query parsing (e.g., "vegan tacos under $15")
+	•	Hybrid vector + keyword search
+	•	Geolocation-based filtering
+	•	Multi-agent orchestration with quality checks
+	•	JSON-based restaurant data ingestion
+	•	RESTful API with Swagger documentation
+❌ Out of Scope (Future Phases):
+	•	User authentication and personalization
+	•	Real-time menu updates
+	•	Image-based search
+	•	Reservation/ordering functionality
+	•	Multi-language support
+
+2. Business Requirements
+2.1 Core Value Propositions
+User Need
+Solution
+Business Value
+"I want vegan options nearby"
+AI parses intent + applies filters
+Higher conversion vs keyword search
+"Show me romantic dinner spots"
+Emotional context understanding
+Differentiation from competitors
+"Find gluten-free pizza"
+Dietary restriction filtering
+Serves niche markets
+"Cheap lunch near Harvard"
+Location + price + semantic search
+Contextual relevance
+
+2.2 Business Constraints
+Constraint
+Impact
+Mitigation
+Budget: $500/month for POC
+LLM costs must stay low
+Use DeepSeek ($0.14/1M tokens)
+Timeline: 4-week POC
+Limited feature scope
+Focus on core search functionality
+Data Freshness: Static JSON files
+No real-time updates
+Blue/Green re-indexing strategy
+Team Size: 2 developers
+Simple architecture
+Use managed services (Qdrant, PostgreSQL)
+
+
+3. User Stories
+3.1 Epic: Natural Language Search
+US-001: Basic Text Search
+As a user, I want to search for "pizza"  So that I can see all pizza options from nearby restaurants  Acceptance Criteria: - Query returns relevant pizza dishes - Results show item name, description, price, restaurant - Response time < 1 second - Minimum 5 results (if available) 
+US-002: Dietary Filter Search
+As a health-conscious user, I want to search for "vegan tacos" So that I can find plant-based options  Acceptance Criteria: - System extracts "vegan" as dietary filter - Only dishes tagged with "vegan" are returned - Semantic search still matches "tacos" concept - Results ranked by relevance 
+US-003: Location-Based Search
+As a user, I want to search "sushi near me" So that I can find nearby sushi restaurants  Acceptance Criteria: - System prompts for location if not provided - Results filtered by distance (default 5km) - Distance shown for each result - Sorted by relevance + proximity 
+US-004: Complex Multi-Filter Search
+As a user, I want to search "romantic Italian dinner under $50" So that I can plan a date night  Acceptance Criteria: - System extracts: cuisine=Italian, price_max=50, context=romantic - Results have rating >= 4.5 (romantic indicator) - Price filtering applied correctly - Ambiance/atmosphere considered in ranking 
+3.2 Epic: Data Ingestion
+US-005: JSON File Upload
+As a data admin, I want to upload restaurant JSON files So that new restaurants appear in search  Acceptance Criteria: - System validates JSON against schema - Invalid files logged with specific errors - Valid files processed within 5 minutes - Search index updated without downtime 
+US-006: Data Quality Reporting
+As a data admin, I want to see data quality metrics So that I can improve source data  Acceptance Criteria: - Dashboard shows completeness, accuracy scores - Flagged items listed with reasons - Export capability for flagged items - Historical trend visualization 
+
+4. Functional Requirements
+4.1 Search Functionality
+Requirement ID
+Description
+Priority
+Acceptance Criteria
+FR-S-001
+Natural language query parsing
+Must Have
+90% intent accuracy on test set
+FR-S-002
+Hybrid vector + keyword search
+Must Have
+Both search modes execute in parallel
+FR-S-003
+Geolocation filtering
+Should Have
+Distance filter works within 500m accuracy
+FR-S-004
+Dietary restriction filtering
+Must Have
+Exact match for dietary tags
+FR-S-005
+Price range filtering
+Must Have
+Inclusive range filtering
+FR-S-006
+Cuisine type filtering
+Must Have
+Multi-select cuisine filtering
+FR-S-007
+Result ranking customization
+Should Have
+User can sort by price, rating, distance
+FR-S-008
+Pagination support
+Must Have
+Limit, offset parameters
+
+4.2 Data Ingestion
+Requirement ID
+Description
+Priority
+Acceptance Criteria
+FR-I-001
+JSON schema validation
+Must Have
+100% validation before processing
+FR-I-002
+Batch file processing
+Must Have
+Process 100 files in < 10 minutes
+FR-I-003
+Data enrichment (geocoding)
+Should Have
+90%+ addresses geocoded
+FR-I-004
+Duplicate detection
+Must Have
+Same item_id handled correctly
+FR-I-005
+Zero-downtime re-indexing
+Must Have
+Blue/Green deployment
+FR-I-006
+Ingestion audit logging
+Should Have
+All operations logged to database
+
+4.3 Quality Assurance
+Requirement ID
+Description
+Priority
+Acceptance Criteria
+FR-Q-001
+Search result quality scoring
+Must Have
+Each result has quality score 0-1
+FR-Q-002
+Low-quality result filtering
+Should Have
+Results < 0.6 score filtered
+FR-Q-003
+Output verification
+Should Have
+Final results pass consistency checks
+FR-Q-004
+Relevance explanation
+Could Have
+Show why result matched query
+
+4.4 API Functionality
+Requirement ID
+Description
+Priority
+Acceptance Criteria
+FR-A-001
+RESTful search endpoint
+Must Have
+POST /api/v1/search
+FR-A-002
+Swagger documentation
+Must Have
+Auto-generated, interactive
+FR-A-003
+Error handling
+Must Have
+Descriptive error messages with codes
+FR-A-004
+Health check endpoint
+Must Have
+GET /health returns status
+FR-A-005
+Metrics endpoint
+Should Have
+GET /metrics returns Prometheus format
+
+
+5. Non-Functional Requirements
+5.1 Performance
+Metric
+Target (POC)
+Target (Production)
+Measurement Method
+Search Latency (P95)
+< 800ms
+< 400ms
+FastAPI middleware
+Search Latency (P99)
+< 1500ms
+< 800ms
+FastAPI middleware
+Concurrent Users
+10
+100
+Locust load testing
+Ingestion Throughput
+100 items/min
+1000 items/min
+Batch processing logs
+Availability
+95%
+99.9%
+Uptime monitoring
+
+5.2 Scalability
+Aspect
+POC Target
+Production Target
+Restaurants
+100-500
+10,000+
+Menu Items
+5,000-10,000
+500,000+
+Daily Queries
+1,000
+1,000,000+
+Vector Dimensions
+384
+768-1536
+
+5.3 Security
+Requirement
+Implementation
+Priority
+API Authentication
+API Key (POC), OAuth2 (Prod)
+Should Have (Prod)
+Rate Limiting
+100 req/min per IP
+Must Have
+Input Validation
+Pydantic models
+Must Have
+HTTPS Only
+TLS 1.3
+Must Have (Prod)
+PII Protection
+No PII in logs
+Must Have
+
+5.4 Reliability
+Requirement
+POC
+Production
+Data Backup
+Daily
+Hourly + real-time replication
+Recovery Time Objective (RTO)
+4 hours
+15 minutes
+Recovery Point Objective (RPO)
+24 hours
+5 minutes
+Error Rate
+< 5%
+< 0.1%
+
+
+6. Success Criteria
+6.1 POC Success Metrics
+Primary Metrics:
+Metric
+Target
+Measurement
+Search Relevance
+85% of queries return relevant top-3 results
+Manual evaluation (50 test queries)
+Intent Classification Accuracy
+90%+ correct intent extraction
+Automated validation
+System Uptime
+95%+ during testing period
+Health check monitoring
+Cost per Search
+< $0.01 average
+LLM token usage tracking
+
+Secondary Metrics:
+Metric
+Target
+Measurement
+API Response Time (P95)
+< 800ms
+Middleware logging
+Data Ingestion Success Rate
+> 95%
+Audit table
+Zero-Result Query Rate
+< 10%
+Query analytics
+Quality Agent Precision
+> 80%
+Human review
+
+6.2 Go/No-Go Decision Criteria
+GO Criteria (Proceed to Beta):
+	•	✅ Primary metrics all achieved
+	•	✅ No critical bugs in search functionality
+	•	✅ Stakeholder demo successful
+	•	✅ Cost projection within budget
+NO-GO Criteria (Iterate POC):
+	•	❌ Search relevance < 75%
+	•	❌ System crashes under 10 concurrent users
+	•	❌ Cost per search > $0.05
+	•	❌ Ingestion fails for > 20% of files
+
+7. Risks and Assumptions
+7.1 Risks
+Risk
+Probability
+Impact
+Mitigation Strategy
+LLM API rate limits
+Medium
+High
+Implement caching, use multiple providers
+Vector DB performance degradation
+Low
+High
+Index optimization, collection sharding
+Incomplete JSON data
+High
+Medium
+Validation + default values + enrichment
+Inaccurate query parsing
+Medium
+High
+Fine-tune prompts, add few-shot examples
+Budget overrun (LLM costs)
+Medium
+Medium
+Monitor usage, switch to cheaper models
+
+7.2 Assumptions
+Assumption
+Validation Method
+Risk if Wrong
+All JSON files follow v1.0 schema
+Schema validation on real data
+High - ingestion failures
+384-dim embeddings sufficient
+Offline evaluation
+Medium - retrain needed
+Qdrant handles 10K items on Docker
+Load testing
+Medium - need clustering
+DeepSeek API reliability > 99%
+Production monitoring
+High - need fallback
+
+7.3 Dependencies
+Dependency
+Owner
+Criticality
+Mitigation
+DeepSeek API availability
+External
+High
+OpenAI fallback configured
+Restaurant JSON data quality
+Data Team
+High
+Validation + enrichment agents
+Docker host availability
+DevOps
+Medium
+Cloud migration plan ready
+Qdrant open-source license
+Community
+Low
+Apache 2.0 license verified
+
+
+8. Timeline and Milestones
+8.1 4-Week POC Schedule
+Week 1: Foundation (Nov 30 - Dec 6)
+	•	[ ] Day 1-2: Environment setup (Docker, Qdrant, PostgreSQL)
+	•	[ ] Day 3-4: Data models + JSON schema validation
+	•	[ ] Day 5-7: Basic ingestion pipeline (no AI)
+Deliverable: Ingest 50 sample restaurants successfully
+
+Week 2: AI Integration (Dec 7 - Dec 13)
+	•	[ ] Day 1-2: LLM provider setup (DeepSeek, Claude)
+	•	[ ] Day 3-4: ParsingAgent + EnrichmentAgent implementation
+	•	[ ] Day 5-6: Embedding generation pipeline
+	•	[ ] Day 7: Blue/Green re-indexing
+Deliverable: AI-enhanced ingestion for 500 restaurants
+
+Week 3: Search Pipeline (Dec 14 - Dec 20)
+	•	[ ] Day 1-2: Search API endpoints (FastAPI)
+	•	[ ] Day 3-4: Hybrid search integration (Qdrant)
+	•	[ ] Day 5-6: QualityAgent + VerificationAgent
+	•	[ ] Day 7: SearchOrchestrator implementation
+Deliverable: Functional search API with quality gates
+
+Week 4: Testing & Launch (Dec 21 - Dec 27)
+	•	[ ] Day 1-2: Unit + integration tests (80% coverage)
+	•	[ ] Day 3: Load testing (Locust - 10 concurrent users)
+	•	[ ] Day 4: Relevance evaluation (50 test queries)
+	•	[ ] Day 5: Bug fixes + optimization
+	•	[ ] Day 6: Documentation + deployment guide
+	•	[ ] Day 7: Stakeholder demo + handoff
+Deliverable: Production-ready POC with documentation
+
+8.2 Key Milestones
+Milestone
+Date
+Success Criteria
+M1: Data Ingestion Complete
+Dec 6
+500 restaurants indexed
+M2: Search API Functional
+Dec 20
+All endpoints returning data
+M3: Quality Gates Operational
+Dec 23
+Quality agents filtering results
+M4: POC Demo Ready
+Dec 27
+Stakeholder presentation successful
+
+
+9. Approval and Sign-Off
+Role
+Name
+Signature
+Date
+Product Manager
+________________
+________
+________
+Engineering Lead
+________________
+________
+________
+Data Architect
+________________
+________
+________
+Stakeholder (Business)
+________________
+________
+________
+
+
+DOCUMENT 2: Technical Design Document (TDD)
+Technical Design Document
+Multi-Agent Culinary Search Engine
+Version: 3.0 Date: November 30, 2025 Authors: Engineering Team
+
+Table of Contents
+	•	System Architecture
+	•	Component Design
+	•	Data Architecture
+	•	Agent Specifications
+	•	API Design
+	•	Security Architecture
+	•	Performance Optimization
+	•	Monitoring and Observability
+
+1. System Architecture
+1.1 High-Level Architecture
+┌─────────────────────────────────────────────────────────────┐ │                     CLIENT LAYER                             │ │              (Future: Web/Mobile Applications)               │ └────────────────────────────┬────────────────────────────────┘                              │ HTTPS/REST                              ▼ ┌─────────────────────────────────────────────────────────────┐ │                   API GATEWAY LAYER                          │ │                    FastAPI (Python)                          │ │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │ │  │ /search      │  │ /ingest      │  │ /health      │     │ │  │ /restaurants │  │ /metrics     │  │ /docs        │     │ │  └──────────────┘  └──────────────┘  └──────────────┘     │ │                                                              │ │  Middleware: Rate Limiting, Auth, Logging, CORS             │ └────────────────────────────┬────────────────────────────────┘                              │                              ▼ ┌─────────────────────────────────────────────────────────────┐ │              AGENT ORCHESTRATION LAYER                       │ │                  (BeeAI Framework)                           │ │                                                              │ │  ┌──────────────────────────────────────────────────────┐  │ │  │            INGESTION ORCHESTRATOR                     │  │ │  │  ┌────────┐  ┌──────────┐  ┌──────────┐            │  │ │  │  │ Parse  │→ │ Validate │→ │ Enrich   │            │  │ │  │  │ Agent  │  │ Agent    │  │ Agent    │            │  │ │  │  └────────┘  └──────────┘  └──────────┘            │  │ │  │                      ↓                               │  │ │  │              ┌──────────────┐                        │  │ │  │              │ Quality Agent│                        │  │ │  │              └──────────────┘                        │  │ │  └──────────────────────────────────────────────────────┘  │ │                                                              │ │  ┌──────────────────────────────────────────────────────┐  │ │  │             SEARCH ORCHESTRATOR                       │  │ │  │  ┌────────┐  ┌──────────┐  ┌──────────┐            │  │ │  │  │ Query  │→ │ Search   │→ │ Ranking  │            │  │ │  │  │ Parser │  │ Executor │  │ Agent    │            │  │ │  │  └────────┘  └──────────┘  └──────────┘            │  │ │  │                      ↓                               │  │ │  │       ┌──────────────┴──────────────┐               │  │ │  │       │                              │               │  │ │  │       ▼                              ▼               │  │ │  │  ┌──────────┐              ┌──────────────┐        │  │ │  │  │ Quality  │              │ Verification │        │  │ │  │  │ Agent    │              │ Agent        │        │  │ │  │  └──────────┘              └──────────────┘        │  │ │  └──────────────────────────────────────────────────────┘  │ └────────────────────────────┬────────────────────────────────┘                              │                              ▼ ┌─────────────────────────────────────────────────────────────┐ │              DATA & STORAGE LAYER                            │ │                                                              │ │  ┌──────────────────────────────────────────────────────┐  │ │  │         Qdrant Vector Database                        │  │ │  │  ┌───────────────┐        ┌──────────────────┐      │  │ │  │  │ Dense Vectors │        │ Sparse Vectors   │      │  │ │  │  │ (384 dim)     │        │ (BM25)           │      │  │ │  │  │ Cosine Sim    │        │ FastEmbed        │      │  │ │  │  └───────────────┘        └──────────────────┘      │  │ │  │                                                       │  │ │  │  Collections:                                        │  │ │  │  - menu_items_YYYYMMDD_HHMMSS (timestamped)         │  │ │  │  - menu_items_active (alias)                         │  │ │  └──────────────────────────────────────────────────────┘  │ │                                                              │ │  ┌──────────────────────────────────────────────────────┐  │ │  │         PostgreSQL Metadata Store                     │  │ │  │  Tables:                                             │  │ │  │  - ingestion_audit                                   │  │ │  │  - search_audit                                      │  │ │  │  - quality_metrics                                   │  │ │  │  - agent_execution_logs                              │  │ │  └──────────────────────────────────────────────────────┘  │ └────────────────────────────┬────────────────────────────────┘                              │                              ▼ ┌─────────────────────────────────────────────────────────────┐ │              EXTERNAL SERVICES                               │ │                                                              │ │  ┌───────────┐  ┌───────────┐  ┌──────────────────┐       │ │  │ DeepSeek  │  │ Claude    │  │ SentenceTransform│       │ │  │ API       │  │ API       │  │ (Local)          │       │ │  │ (Primary) │  │ (Verify)  │  │ bge-small-en     │       │ │  └───────────┘  └───────────┘  └──────────────────┘       │ └─────────────────────────────────────────────────────────────┘ 
+1.2 Component Interaction Sequence
+Search Request Flow:
+User → API Gateway → SearchOrchestrator                            │                            ├→ QueryParsingAgent (DeepSeek)                            │     ↓                            │  ParsedQuery {intent, filters, semantic_query}                            │                            ├→ QueryBuilderAgent                            │     ↓                            │  QdrantQuery {vector, filter, fusion}                            │                            ├→ Qdrant Vector DB                            │     ↓                            │  RawResults [...]                            │                            ├→ RankingAgent                            │     ↓                            │  RankedResults [...]                            │                            ├→ QualityAgent (DeepSeek)                            │     ↓                            │  FilteredResults [...] (quality >= 0.6)                            │                            └→ VerificationAgent (Claude)                                  ↓                               FinalResponse {results, quality_score, status}                                  ↓                            API Gateway → User 
+
+2. Component Design
+2.1 Agent Base Class
+# agents/base.py  from abc import ABC, abstractmethod from typing import Any, Dict, Optional from pydantic import BaseModel import structlog  logger = structlog.get_logger()  class AgentConfig(BaseModel):     """Agent configuration"""     name: str     timeout_seconds: int = 30     max_retries: int = 3     cache_ttl_seconds: Optional[int] = None  class AgentResult(BaseModel):     """Standardized agent output"""     success: bool     data: Any     error_message: Optional[str] = None     execution_time_ms: int     metadata: Dict[str, Any] = {}  class BaseAgent(ABC):     """Base class for all agents"""          def __init__(self, config: AgentConfig, llm_client=None):         self.config = config         self.llm = llm_client         self.logger = logger.bind(agent=config.name)          @abstractmethod     async def execute(self, input_data: Dict[str, Any]) -> AgentResult:         """         Execute agent logic                  Must be implemented by subclasses         """         pass          async def run_with_retry(self, input_data: Dict[str, Any]) -> AgentResult:         """         Execute with automatic retry logic         """         import asyncio                  for attempt in range(self.config.max_retries):             try:                 start_time = time.time()                                  # Execute with timeout                 result = await asyncio.wait_for(                     self.execute(input_data),                     timeout=self.config.timeout_seconds                 )                                  execution_time = int((time.time() - start_time) * 1000)                 result.execution_time_ms = execution_time                                  self.logger.info(                     "agent_execution_success",                     attempt=attempt + 1,                     duration_ms=execution_time                 )                                  return result                              except asyncio.TimeoutError:                 self.logger.warning(                     "agent_timeout",                     attempt=attempt + 1,                     timeout=self.config.timeout_seconds                 )                 if attempt < self.config.max_retries - 1:                     await asyncio.sleep(2 ** attempt)  # Exponential backoff                                  except Exception as e:                 self.logger.error(                     "agent_execution_error",                     attempt=attempt + 1,                     error=str(e)                 )                 if attempt < self.config.max_retries - 1:                     await asyncio.sleep(2 ** attempt)                  # All retries failed         return AgentResult(             success=False,             data=None,             error_message=f"Failed after {self.config.max_retries} attempts"         ) 
+2.2 Orchestrator Pattern
+# orchestration/base_orchestrator.py  from typing import List, Dict, Any from enum import Enum  class WorkflowStage(Enum):     INITIALIZED = "initialized"     PARSING = "parsing"     EXECUTION = "execution"     QUALITY_CHECK = "quality_check"     VERIFICATION = "verification"     COMPLETED = "completed"     FAILED = "failed"  class BaseOrchestrator:     """     Base orchestrator for agent coordination     """          def __init__(self):         self.agents: Dict[str, BaseAgent] = {}         self.state: WorkflowState = None         self.logger = structlog.get_logger()          def register_agent(self, name: str, agent: BaseAgent):         """Register agent with orchestrator"""         self.agents[name] = agent         self.logger.info("agent_registered", agent_name=name)          async def execute_stage(         self,          stage_name: str,          agent_name: str,          input_data: Dict[str, Any]     ) -> AgentResult:         """         Execute a single workflow stage                  Algorithm:         1. Update state to current stage         2. Get agent by name         3. Execute agent with retry         4. Log result         5. Return result         """                  self.state.current_stage = stage_name         self.logger.info("stage_started", stage=stage_name)                  agent = self.agents.get(agent_name)         if not agent:             raise ValueError(f"Agent not found: {agent_name}")                  result = await agent.run_with_retry(input_data)                  # Store result in state         self.state.stage_results[stage_name] = result                  if not result.success:             self.state.current_stage = WorkflowStage.FAILED.value             self.logger.error("stage_failed", stage=stage_name, error=result.error_message)                  return result          async def execute_parallel(         self,          stage_name: str,          tasks: List[Dict[str, Any]]     ) -> List[AgentResult]:         """         Execute multiple agents in parallel                  tasks: [{"agent_name": "...", "input": {...}}, ...]         """                  import asyncio                  self.logger.info("parallel_stage_started", stage=stage_name, task_count=len(tasks))                  async def execute_task(task):             agent = self.agents[task["agent_name"]]             return await agent.run_with_retry(task["input"])                  results = await asyncio.gather(*[execute_task(t) for t in tasks])                  self.state.stage_results[stage_name] = results                  return results 
+
+3. Data Architecture
+3.1 Database Schemas
+PostgreSQL Tables:
+-- Ingestion audit table CREATE TABLE ingestion_audit (     id SERIAL PRIMARY KEY,     batch_id UUID NOT NULL,     workflow_id UUID NOT NULL,     started_at TIMESTAMPTZ NOT NULL,     completed_at TIMESTAMPTZ,     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'running', 'success', 'failed', 'partial')),          -- Metrics     files_discovered INT DEFAULT 0,     files_processed INT DEFAULT 0,     items_processed INT DEFAULT 0,     items_failed INT DEFAULT 0,          -- Quality     avg_quality_score DECIMAL(3,2),     validation_errors JSONB,          -- Metadata     triggered_by VARCHAR(100),     collection_name VARCHAR(255),     duration_seconds INT,     error_summary JSONB,          created_at TIMESTAMPTZ DEFAULT NOW(),     updated_at TIMESTAMPTZ DEFAULT NOW() );  CREATE INDEX idx_ingestion_batch_id ON ingestion_audit(batch_id); CREATE INDEX idx_ingestion_started_at ON ingestion_audit(started_at DESC);   -- Search audit table CREATE TABLE search_audit (     id SERIAL PRIMARY KEY,     request_id UUID NOT NULL UNIQUE,     workflow_id UUID NOT NULL,          -- Request     user_query TEXT NOT NULL,     parsed_query JSONB,     filters_applied JSONB,     user_location JSONB,          -- Results     result_count INT DEFAULT 0,     quality_score DECIMAL(3,2),     verification_status VARCHAR(20),     verification_issues JSONB,          -- Performance     parsing_duration_ms INT,     search_duration_ms INT,     total_duration_ms INT,          -- Agent execution     agent_executions JSONB,          -- Metadata     created_at TIMESTAMPTZ DEFAULT NOW(),     user_ip INET,     user_agent TEXT );  CREATE INDEX idx_search_created_at ON search_audit(created_at DESC); CREATE INDEX idx_search_user_query ON search_audit USING gin(to_tsvector('english', user_query));   -- Quality metrics (aggregated) CREATE TABLE quality_metrics (     id SERIAL PRIMARY KEY,     metric_date DATE NOT NULL,     metric_hour INT CHECK (metric_hour >= 0 AND metric_hour < 24),          -- Ingestion metrics     ingestion_success_rate DECIMAL(5,2),     avg_data_completeness DECIMAL(5,2),     avg_extraction_confidence DECIMAL(5,2),          -- Search metrics     avg_search_quality_score DECIMAL(3,2),     verification_pass_rate DECIMAL(5,2),     zero_result_rate DECIMAL(5,2),     avg_result_diversity DECIMAL(3,2),          -- Agent metrics     agent_success_rates JSONB,     agent_avg_latencies JSONB,          -- Computed     created_at TIMESTAMPTZ DEFAULT NOW(),          UNIQUE(metric_date, metric_hour) );  CREATE INDEX idx_quality_metrics_date ON quality_metrics(metric_date DESC, metric_hour DESC);   -- Agent execution logs CREATE TABLE agent_execution_logs (     id SERIAL PRIMARY KEY,     execution_id UUID NOT NULL,     workflow_id UUID NOT NULL,     agent_name VARCHAR(100) NOT NULL,          -- Execution details     input_data JSONB,     output_data JSONB,     success BOOLEAN NOT NULL,     error_message TEXT,          -- Performance     started_at TIMESTAMPTZ NOT NULL,     completed_at TIMESTAMPTZ,     duration_ms INT,     retry_count INT DEFAULT 0,          -- Context     stage_name VARCHAR(100),     parent_execution_id UUID,          created_at TIMESTAMPTZ DEFAULT NOW() );  CREATE INDEX idx_agent_logs_workflow ON agent_execution_logs(workflow_id); CREATE INDEX idx_agent_logs_agent ON agent_execution_logs(agent_name, created_at DESC); 
+3.2 Qdrant Collection Configuration
+# config/qdrant_schema.py  from qdrant_client import QdrantClient from qdrant_client.models import (     VectorParams,     Distance,     SparseVectorParams,     PayloadSchemaType,     CreateCollection,     OptimizersConfigDiff )  def create_menu_items_collection(client: QdrantClient, collection_name: str):     """     Create optimized Qdrant collection for menu items     """          client.create_collection(         collection_name=collection_name,                  # Vector configurations         vectors_config={             "dense": VectorParams(                 size=384,  # bge-small-en-v1.5                 distance=Distance.COSINE,                 on_disk=False  # Keep in memory for speed             )         },                  sparse_vectors_config={             "sparse": SparseVectorParams(                 index={"full_scan_threshold": 10000}             )         },                  # Optimizer config for performance         optimizers_config=OptimizersConfigDiff(             indexing_threshold=20000,             memmap_threshold=50000         ),                  # HNSW index parameters for dense vectors         hnsw_config={             "m": 16,  # Number of edges per node             "ef_construct": 100,  # Construction time accuracy             "full_scan_threshold": 10000         }     )          # Create payload indexes for fast filtering     payload_indexes = {         "item_price": PayloadSchemaType.FLOAT,         "restaurant_rating": PayloadSchemaType.FLOAT,         "restaurant_price_range": PayloadSchemaType.KEYWORD,         "dietary_info": PayloadSchemaType.KEYWORD,         "cuisine_tags": PayloadSchemaType.KEYWORD,         "location": PayloadSchemaType.GEO,         "available": PayloadSchemaType.BOOL,         "restaurant_id": PayloadSchemaType.KEYWORD,         "item_category": PayloadSchemaType.KEYWORD     }          for field, schema_type in payload_indexes.items():         client.create_payload_index(             collection_name=collection_name,             field_name=field,             field_schema=schema_type         ) 
+
+4. Agent Specifications
+4.1 QueryParsingAgent Design
+Responsibility: Extract structured parameters from natural language
+Input:
+{     "query": "romantic Italian dinner under $50 near downtown" } 
+Output:
+{     "intent": "find_restaurant",     "filters": {         "cuisine_tags": ["Italian"],         "price_max": 50.0,         "restaurant_rating_min": 4.5     },     "semantic_query": "romantic Italian dinner",     "emotional_context": ["romantic", "upscale"],     "location_required": true } 
+Algorithm:
+# agents/query_parsing_agent.py  class QueryParsingAgent(BaseAgent):     """     LLM-powered query parser     """          async def execute(self, input_data: Dict[str, Any]) -> AgentResult:         """         Parse natural language query                  Algorithm:         1. Build few-shot prompt with examples         2. Call LLM with structured output request         3. Validate output against Pydantic schema         4. Return parsed parameters         """                  query = input_data["query"]                  # Few-shot examples for better accuracy         examples = [             {                 "query": "vegan tacos under $15",                 "output": {                     "intent": "find_dish",                     "filters": {"price_max": 15, "dietary_info": ["vegan"]},                     "semantic_query": "tacos",                     "emotional_context": [],                     "location_required": false                 }             },             {                 "query": "romantic Italian dinner",                 "output": {                     "intent": "find_restaurant",                     "filters": {"cuisine_tags": ["Italian"], "restaurant_rating_min": 4.5},                     "semantic_query": "romantic Italian dinner",                     "emotional_context": ["romantic", "upscale"],                     "location_required": false                 }             }         ]                  # Build prompt         prompt = self._build_prompt(query, examples)                  # Call LLM (DeepSeek)         try:             response = await self.llm_caller.call_with_structured_output(                 prompt=prompt,                 system_prompt=self._get_system_prompt(),                 temperature=0.1  # Low for consistency             )                          # Validate with Pydantic             parsed = ParsedQuery(**response)                          return AgentResult(                 success=True,                 data=parsed.dict(),                 metadata={"llm_provider": "deepseek"}             )                      except Exception as e:             self.logger.error("parsing_failed", error=str(e))             return AgentResult(                 success=False,                 data=None,                 error_message=str(e)             )          def _build_prompt(self, query: str, examples: List[Dict]) -> str:         """Build few-shot prompt"""                  examples_text = "\n\n".join([             f"Query: {ex['query']}\nOutput: {json.dumps(ex['output'], indent=2)}"             for ex in examples         ])                  return f""" Parse restaurant search queries into structured parameters.  Examples: {examples_text}  Now parse this query: Query: {query} Output: """          def _get_system_prompt(self) -> str:         return """ You are a restaurant search query parser.  Extract: 1. intent: "find_dish" | "find_restaurant" | "browse" 2. filters: price, cuisine, dietary restrictions, rating 3. semantic_query: core search term (remove filter keywords) 4. emotional_context: ["romantic", "casual", "quick", "family-friendly"] 5. location_required: boolean  Return valid JSON only. """ 
+4.2 SearchQualityAgent Design
+Responsibility: Filter low-quality results and assess relevance
+Input:
+{     "query": "vegan tacos",     "results": [         {"item_id": "001", "item_name": "Black Bean Tacos", ...},         {"item_id": "002", "item_name": "Fish Tacos", ...},  # Not vegan!         ...     ],     "min_relevance": 0.6 } 
+Output:
+{     "filtered_results": [         {"item_id": "001", "quality_score": 0.92, ...}     ],     "removed_count": 1,     "avg_quality_score": 0.92 } 
+Algorithm:
+# agents/quality_agent.py  class SearchQualityAgent(BaseAgent):     """     Result quality assessor     """          async def execute(self, input_data: Dict[str, Any]) -> AgentResult:         """         Filter results by quality                  Algorithm:         1. Batch assess top 10 with LLM (relevance)         2. Rule-based check for remaining (completeness, consistency)         3. Filter below threshold         4. Re-rank by quality * relevance         5. Return filtered list         """                  query = input_data["query"]         results = input_data["results"]         min_relevance = input_data.get("min_relevance", 0.6)                  # Split: LLM for top 10, rules for rest         top_results = results[:10]         remaining_results = results[10:]                  # LLM batch assessment         llm_scores = await self._batch_assess_with_llm(query, top_results)                  # Rule-based assessment         rule_scores = [self._rule_based_assessment(r) for r in remaining_results]                  all_scores = llm_scores + rule_scores                  # Filter and attach scores         filtered = []         for result, score in zip(results, all_scores):             if score.overall_score >= min_relevance:                 result["quality_score"] = score.overall_score                 result["quality_issues"] = score.issues                 filtered.append(result)                  # Re-rank by combined score         filtered.sort(             key=lambda r: r.get("match_score", 0.5) * r["quality_score"],             reverse=True         )                  return AgentResult(             success=True,             data={                 "filtered_results": filtered,                 "removed_count": len(results) - len(filtered),                 "avg_quality_score": sum(s.overall_score for s in all_scores) / len(all_scores)             }         )          async def _batch_assess_with_llm(         self,          query: str,          results: List[Dict]     ) -> List[QualityScore]:         """         Assess relevance using LLM                  Batched to reduce API calls         """                  results_text = "\n".join([             f"{i+1}. {r['item_name']} - {r.get('item_description', 'N/A')} ({r['restaurant_name']})"             for i, r in enumerate(results)         ])                  prompt = f""" Query: "{query}"  Results: {results_text}  For each result, score: - relevance (0-1): Match to query - completeness (0-1): Sufficient information - consistency (0-1): Price/cuisine alignment  Return JSON: [   {{"result_number": 1, "relevance": 0.9, "completeness": 0.85, "consistency": 1.0, "issues": []}},   ... ] """                  response = await self.llm_caller.call_with_structured_output(             prompt=prompt,             temperature=0.0         )                  # Convert to QualityScore objects         scores = []         for assessment in response:             overall = (                 assessment["relevance"] * 0.6 +                 assessment["completeness"] * 0.2 +                 assessment["consistency"] * 0.2             )             scores.append(QualityScore(                 item_id=results[assessment["result_number"]-1]["item_id"],                 relevance_score=assessment["relevance"],                 completeness_score=assessment["completeness"],                 consistency_score=assessment["consistency"],                 overall_score=overall,                 issues=assessment.get("issues", []),                 passed=overall >= 0.6             ))                  return scores          def _rule_based_assessment(self, result: Dict) -> QualityScore:         """         Fast rule-based quality check         """                  issues = []                  # Completeness         completeness = 1.0         if not result.get("item_description"):             completeness -= 0.3             issues.append("missing_description")         if not result.get("dietary_info"):             completeness -= 0.2                  # Consistency         consistency = 1.0         if result.get("item_price", 0) <= 0:             consistency = 0.0             issues.append("invalid_price")                  # Default relevance (no LLM)         relevance = 0.7                  overall = relevance * 0.6 + completeness * 0.2 + consistency * 0.2                  return QualityScore(             item_id=result["item_id"],             relevance_score=relevance,             completeness_score=completeness,             consistency_score=consistency,             overall_score=overall,             issues=issues,             passed=overall >= 0.6         ) 
+
+5. API Design
+5.1 FastAPI Application Structure
+# api/app.py  from fastapi import FastAPI, HTTPException, Depends, Request from fastapi.middleware.cors import CORSMiddleware from fastapi.middleware.trustedhost import TrustedHostMiddleware from slowapi import Limiter, _rate_limit_exceeded_handler from slowapi.util import get_remote_address from slowapi.errors import RateLimitExceeded import structlog  # Initialize app app = FastAPI(     title="Culinary Search API",     description="Multi-agent AI-powered restaurant search",     version="3.0.0",     docs_url="/docs",     redoc_url="/redoc" )  # Rate limiting limiter = Limiter(key_func=get_remote_address) app.state.limiter = limiter app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # CORS app.add_middleware(     CORSMiddleware,     allow_origins=["*"],  # Configure for production     allow_credentials=True,     allow_methods=["*"],     allow_headers=["*"], )  # Structured logging logger = structlog.get_logger()  # Dependency: Get services async def get_search_service() -> SearchService:     return SearchService(         llm_config=LLMConfig(),         qdrant_client=get_qdrant_client(),         embedder=get_embedding_model()     )  # Health check @app.get("/health") async def health_check():     """System health status"""     return {         "status": "healthy",         "version": "3.0.0",         "timestamp": datetime.utcnow().isoformat()     }  # Main search endpoint @app.post("/api/v1/search", response_model=SearchResponse) @limiter.limit("100/minute") async def search(     request: Request,     search_request: SearchRequest,     service: SearchService = Depends(get_search_service) ):     """     Hybrid AI-powered search          Executes multi-agent workflow:     1. QueryParsingAgent extracts intent     2. Hybrid vector search (Qdrant)     3. RankingAgent applies custom logic     4. QualityAgent filters low-quality     5. VerificationAgent validates output     """          request_id = str(uuid.uuid4())          logger.info(         "search_request",         request_id=request_id,         query=search_request.query     )          try:         response = await service.search(search_request)                  # Audit log         await log_search_audit(request_id, search_request, response)                  return response              except Exception as e:         logger.error(             "search_error",             request_id=request_id,             error=str(e)         )         raise HTTPException(status_code=500, detail=str(e)) 
+
+6. Security Architecture
+6.1 Security Layers
+┌─────────────────────────────────────────┐ │  Layer 1: Network Security              │ │  - TLS 1.3 encryption                   │ │  - Firewall rules (port whitelist)      │ │  - DDoS protection (Cloudflare)         │ └─────────────────┬───────────────────────┘                   │                   ▼ ┌─────────────────────────────────────────┐ │  Layer 2: API Gateway                   │ │  - Rate limiting (100 req/min)          │ │  - API key authentication               │ │  - Request size limits (1MB max)        │ │  - CORS policy enforcement              │ └─────────────────┬───────────────────────┘                   │                   ▼ ┌─────────────────────────────────────────┐ │  Layer 3: Application Security          │ │  - Input validation (Pydantic)          │ │  - SQL injection prevention             │ │  - XSS protection (auto-escape)         │ │  - Secrets management (env vars)        │ └─────────────────┬───────────────────────┘                   │                   ▼ ┌─────────────────────────────────────────┐ │  Layer 4: Data Security                 │ │  - Encryption at rest (volume level)    │ │  - No PII in logs                       │ │  - Database access controls             │ │  - Audit logging (PostgreSQL)           │ └─────────────────────────────────────────┘ 
+
+7. Performance Optimization
+7.1 Caching Strategy
+# utils/caching.py  from functools import lru_cache from cachetools import TTLCache import hashlib  class LLMResponseCache:     """     Cache LLM responses to reduce costs     """          def __init__(self, max_size=1000, ttl_seconds=3600):         self.cache = TTLCache(maxsize=max_size, ttl=ttl_seconds)          def _generate_key(self, prompt: str, model: str) -> str:         """Generate cache key from prompt"""         content = f"{model}:{prompt}"         return hashlib.sha256(content.encode()).hexdigest()          async def get_or_call(         self,         prompt: str,         model: str,         llm_caller: callable     ) -> Dict:         """         Check cache first, call LLM if miss         """                  key = self._generate_key(prompt, model)                  if key in self.cache:             logger.debug("llm_cache_hit", key=key[:8])             return self.cache[key]                  # Cache miss - call LLM         logger.debug("llm_cache_miss", key=key[:8])         response = await llm_caller(prompt, model)                  self.cache[key] = response         return response 
+7.2 Connection Pooling
+# config/database.py  from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession from sqlalchemy.orm import sessionmaker  # PostgreSQL connection pool engine = create_async_engine(     os.getenv("POSTGRES_URL"),     pool_size=20,  # Max connections     max_overflow=10,  # Extra connections if pool exhausted     pool_pre_ping=True,  # Verify connection before use     pool_recycle=3600,  # Recycle connections hourly     echo=False  # Set True for SQL logging )  AsyncSessionLocal = sessionmaker(     engine,     class_=AsyncSession,     expire_on_commit=False )  # Qdrant client (reuse connections) from qdrant_client import QdrantClient  @lru_cache() def get_qdrant_client() -> QdrantClient:     """Singleton Qdrant client"""     return QdrantClient(         url=os.getenv("QDRANT_URL"),         timeout=30,         grpc_port=6334,         prefer_grpc=True  # Faster than REST     ) 
+
+8. Monitoring and Observability
+8.1 Metrics Collection
+# monitoring/metrics.py  from prometheus_client import Counter, Histogram, Gauge import time  # Counters search_requests_total = Counter(     'search_requests_total',     'Total search requests',     ['status']  # success/failure )  agent_executions_total = Counter(     'agent_executions_total',     'Total agent executions',     ['agent_name', 'status'] )  # Histograms search_duration_seconds = Histogram(     'search_duration_seconds',     'Search request duration',     buckets=[0.1, 0.5, 1.0, 2.0, 5.0] )  agent_duration_seconds = Histogram(     'agent_duration_seconds',     'Agent execution duration',     ['agent_name'],     buckets=[0.05, 0.1, 0.5, 1.0, 2.0] )  # Gauges active_searches = Gauge(     'active_searches',     'Number of active search requests' )  quality_score_avg = Gauge(     'quality_score_avg',     'Average quality score (last hour)' )  # Usage in agents class MonitoredAgent(BaseAgent):     async def execute(self, input_data):         start_time = time.time()                  try:             result = await self._execute_logic(input_data)                          agent_executions_total.labels(                 agent_name=self.config.name,                 status='success'             ).inc()                          return result                      except Exception as e:             agent_executions_total.labels(                 agent_name=self.config.name,                 status='failure'             ).inc()             raise                  finally:             duration = time.time() - start_time             agent_duration_seconds.labels(                 agent_name=self.config.name             ).observe(duration) 
+8.2 Structured Logging
+# config/logging.py  import structlog from pythonjsonlogger import jsonlogger  def configure_logging():     """     Configure structured JSON logging     """          structlog.configure(         processors=[             structlog.contextvars.merge_contextvars,             structlog.processors.add_log_level,             structlog.processors.TimeStamper(fmt="iso"),             structlog.processors.JSONRenderer()         ],         wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),         context_class=dict,         logger_factory=structlog.PrintLoggerFactory(),         cache_logger_on_first_use=True     )  # Usage logger = structlog.get_logger()  logger.info(     "search_completed",     request_id="abc123",     query="vegan tacos",     result_count=5,     quality_score=0.87,     duration_ms=245 ) 
+
+[Continuing with remaining documents in next message due to length...]
+Would you like me to continue with:
+	•	Document 3: API Reference Documentation
+	•	Document 4: Deployment Guide
+	•	Document 5: Developer Guide
+	•	Document 6: Testing Strategy
+	•	Document 7: Open Source Tools Recommendation
+Let me know and I'll generate the complete remaining documents!
