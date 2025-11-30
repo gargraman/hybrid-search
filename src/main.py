@@ -1,10 +1,17 @@
 from fastapi import FastAPI, Response
 from pydantic import BaseModel
-from src.agents.orchestrator import Orchestrator
 from typing import List
 from prometheus_client import Counter, Histogram, start_http_server
 from loguru import logger
 import time
+
+# Try to import orchestrator, but fall back to simple search if unavailable
+try:
+    from src.agents.orchestrator import Orchestrator
+    USE_ORCHESTRATOR = True
+except Exception as e:
+    logger.warning(f"Orchestrator not available: {e}. Using simple hybrid search.")
+    USE_ORCHESTRATOR = False
 
 app = FastAPI(title="AI-Powered Hybrid Culinary Search Engine")
 
@@ -31,10 +38,16 @@ async def search(request: SearchRequest):
     SEARCH_REQUESTS.inc()
     start = time.time()
     try:
-        orchestrator = Orchestrator()
-        results = await orchestrator.run_search(request.query, request.top_k)
-        logger.info(f"Search query: {request.query}, top_k: {request.top_k}, results: {len(results)}")
-        return results
+        if USE_ORCHESTRATOR:
+            orchestrator = Orchestrator()
+            results = await orchestrator.run_search(request.query, request.top_k)
+            logger.info(f"Search query: {request.query}, top_k: {request.top_k}, results: {len(results)}")
+            return results
+        else:
+            from src.search.hybrid_search import hybrid_search
+            results = hybrid_search(request.query, request.top_k)
+            logger.info(f"Search query (simple): {request.query}, top_k: {request.top_k}, results: {len(results)}")
+            return [SearchResult(id=r['id'], score=r['score'], metadata=r['metadata'], relevance_score=r['score']*10) for r in results]
     except Exception as e:
         logger.error(f"Search error: {e}")
         from src.search.hybrid_search import hybrid_search
