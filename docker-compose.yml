@@ -38,6 +38,8 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.13.0
     container_name: hybrid-qdrant
+    environment:
+      QDRANT_API_KEY: "my_secret_api_key"
     ports:
       - "6333:6333"
       - "6334:6334"
