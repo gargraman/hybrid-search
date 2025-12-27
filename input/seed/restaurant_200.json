@@ -1,82 +1,202 @@
 {
   "restaurant": {
-    "name": "Middle_Eastern Table 200",
-    "address": "725 Lakeview Ave, Philadelphia, PA 14931",
-    "city": "Philadelphia",
-    "state": "PA",
-    "latitude": 39.9526,
-    "longitude": -75.1652,
-    "cuisine": "middle_eastern",
-    "rating": 4.4,
-    "review_count": 2127,
-    "on_time_rate": "99%",
-    "delivery_fee": 42.76,
-    "delivery_minimum": 186.62,
-    "delivery_hours": {
-      "mon_sun": "11am\u20138pm"
+    "name": "Cedars Express",
+    "type": "Mediterranean Grill & Catering",
+    "address": {
+      "street": "331 Ocean Dr",
+      "city": "Los Angeles",
+      "state": "CA",
+      "zip": "11927",
+      "country": "USA"
     },
-    "takeout_hours": {
-      "mon_sun": "11am\u20139pm"
+    "contact": {
+      "phone": "204-695-5201",
+      "website": "https://cedarsexpress.com/"
+    },
+    "location": {
+      "latitude": 34.0928,
+      "longitude": -118.2107
+    },
+    "description": "Award-winning kitchen with a focus on sustainable sourcing and bold flavors.",
+    "history": "Fresh Mediterranean cuisine with healthy, flavorful ingredients.",
+    "hours": {
+      "delivery_hours": "10am\u20139pm",
+      "takeout_hours": "Mon-Fri: 10am-2pm"
+    },
+    "catering_info": {
+      "on_ezcater_since": "September 23, 2017",
+      "delivery_fee": "USD 4.91 & up",
+      "delivery_minimum": "USD 46.98",
+      "delivery_method": "Customer pickup",
+      "group_order": true,
+      "rewards": "3X Rewards"
     }
   },
+  "ratings": {
+    "ezCater_rating": 4.6,
+    "ezCater_review_count": 1673,
+    "tripadvisor_rating": 4.6,
+    "tripadvisor_review_count": 736,
+    "average_rating": 4.6,
+    "top_review_sites": [
+      "Grubhub",
+      "Yelp",
+      "ezCater",
+      "TripAdvisor"
+    ]
+  },
+  "top_reviews": [
+    {
+      "source": "Yelp",
+      "summary": "Best mediterranean worldwide; Chicken Shawarma Wrap amazing.",
+      "date": "Feb 2025"
+    },
+    {
+      "source": "Google",
+      "summary": "Expensive but worth it; best Mixed Grill Plate and efficient service.",
+      "date": "Sep 2023"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Delivery was on time and food was hot.",
+      "date": "1 month ago"
+    },
+    {
+      "source": "ezCater",
+      "summary": "Expensive but worth it; best Mixed Grill Plate and efficient service.",
+      "date": "Jul 2023"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Whole company order for 100 people; food was demolished. Mixed Grill Plate raved about.",
+      "date": "1 month ago"
+    },
+    {
+      "source": "Grubhub",
+      "summary": "Probably the best Baklava ever had. Generous portion.",
+      "date": "Mar 2024"
+    },
+    {
+      "source": "Google",
+      "summary": "Can't go wrong! Always order again, Mixed Grill Plate fresh and delicious.",
+      "date": "Jul 2023"
+    },
+    {
+      "source": "Grubhub",
+      "summary": "Best mediterranean worldwide; Chicken Shawarma Wrap amazing.",
+      "date": "Dec 2024"
+    },
+    {
+      "source": "Yelp",
+      "summary": "Great mediterranean but pricey.",
+      "date": "Mar 2024"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Huge catering delivery; friendly staff and fast order pickup.",
+      "date": "Mar 2025"
+    }
+  ],
   "menu": {
-    "grills": [
-      {
-        "name": "Beef Kofta",
-        "price": 13.5
-      },
-      {
-        "name": "Lamb Kabob",
-        "price": 14.75
-      },
-      {
-        "name": "Chicken Kabob",
-        "price": 13.25
-      }
+    "categories": [
+      "Mezze",
+      "Wraps",
+      "Plates",
+      "Salads",
+      "Desserts",
+      "Beverages"
     ],
-    "mezze": [
+    "items": [
       {
-        "name": "Hummus Trio",
-        "price": 8.75
+        "category": "Mezze",
+        "items": [
+          {
+            "category": "Mezze",
+            "name": "Hummus Platter",
+            "description": "House-made hummus, pita, vegetables",
+            "price": 8.5
+          },
+          {
+            "category": "Mezze",
+            "name": "Falafel",
+            "description": "Crispy chickpea fritters with tahini",
+            "price": 7.75
+          }
+        ]
       },
       {
-        "name": "Labneh",
-        "price": 6.75
-      }
-    ],
-    "wraps": [
-      {
-        "name": "Beef Shawarma Wrap",
-        "price": 11.5
+        "category": "Salads",
+        "items": [
+          {
+            "category": "Salads",
+            "name": "Greek Salad",
+            "description": "Feta, olives, cucumber, tomato, vinaigrette",
+            "price": 10.0
+          },
+          {
+            "category": "Salads",
+            "name": "Tabbouleh",
+            "description": "Bulgur, parsley, tomato, lemon, olive oil",
+            "price": 9.25
+          }
+        ]
       },
       {
-        "name": "Falafel Wrap",
-        "price": 10.25
-      }
-    ],
-    "sides": [
-      {
-        "name": "Roasted Cauliflower",
-        "price": 5.75
+        "category": "Wraps",
+        "items": [
+          {
+            "category": "Wraps",
+            "name": "Chicken Shawarma Wrap",
+            "description": "Marinated chicken, tahini, pickles, tomatoes",
+            "price": 11.5
+          },
+          {
+            "category": "Wraps",
+            "name": "Falafel Wrap",
+            "description": "Falafel, hummus, vegetables, tahini",
+            "price": 10.5
+          }
+        ]
       },
       {
-        "name": "Turmeric Rice",
-        "price": 4.75
-      }
-    ],
-    "desserts": [
-      {
-        "name": "Pistachio Baklava",
-        "price": 4.75
+        "category": "Beverages",
+        "items": [
+          {
+            "category": "Beverages",
+            "name": "Mint Lemonade",
+            "price": 3.5
+          }
+        ]
       },
       {
-        "name": "Semolina Cake",
-        "price": 4.5
+        "category": "Plates",
+        "items": [
+          {
+            "category": "Plates",
+            "name": "Mixed Grill Plate",
+            "description": "Chicken, lamb, kafta, rice, salad",
+            "price": 16.5
+          }
+        ]
+      },
+      {
+        "category": "Desserts",
+        "items": [
+          {
+            "category": "Desserts",
+            "name": "Baklava",
+            "price": 4.75
+          }
+        ]
       }
     ]
   },
-  "about": {
-    "on_ezCater_since": "February 26, 2019",
-    "description": "Fast-casual concept focused on fresh, made-to-order dishes for modern teams."
+  "metadata": {
+    "source_url": "https://www.ezcater.com/catering/cedars-express-los-angeles",
+    "extraction_date": "2025-12-27",
+    "derived_fields": {
+      "average_rating": "Computed from ezCater & Tripadvisor values",
+      "top_review_sites_count": 4
+    }
   }
 }

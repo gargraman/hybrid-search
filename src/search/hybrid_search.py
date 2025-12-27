@@ -110,9 +110,11 @@ def keyword_search_whoosh(query: str, top_k: int = 10) -> List[Dict]:
             rating_value = hit.get("rating")
             latitude_value = hit.get("latitude")
             longitude_value = hit.get("longitude")
+            review_count_value = hit.get("review_count")
             metadata = {
                 "text": hit.get("text", ""),
                 "restaurant": hit.get("restaurant", ""),
+                "restaurant_type": hit.get("restaurant_type", ""),
                 "address": hit.get("address", ""),
                 "city": hit.get("city", ""),
                 "state": hit.get("state", ""),
@@ -122,7 +124,13 @@ def keyword_search_whoosh(query: str, top_k: int = 10) -> List[Dict]:
                 "category": hit.get("category", ""),
                 "price": float(price_value) if price_value is not None else 0.0,
                 "rating": float(rating_value) if rating_value is not None else 0.0,
+                "review_count": int(review_count_value) if review_count_value is not None else 0,
                 "description": hit.get("description", ""),
+                "restaurant_description": hit.get("restaurant_description", ""),
+                "restaurant_history": hit.get("restaurant_history", ""),
+                "contact_phone": hit.get("contact_phone", ""),
+                "contact_website": hit.get("contact_website", ""),
+                "rewards": hit.get("rewards", ""),
             }
             results.append({"id": hit.get("id"), "score": float(hit.score), "metadata": metadata})
         return results

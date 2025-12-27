@@ -1,10 +1,14 @@
-import json
-from pathlib import Path
-from src.models.restaurant import RestaurantData
-from src.db.qdrant import create_collection, upsert_vectors
-from src.db.postgres import create_tables, insert_restaurant, insert_menu_item
 import asyncio
+import json
+import re
+from pathlib import Path
+from typing import Optional
+
 from sentence_transformers import SentenceTransformer
+
+from src.db.postgres import create_tables, insert_restaurant, insert_menu_item
+from src.db.qdrant import create_collection, upsert_vectors
+from src.models.restaurant import RestaurantData
 
 VECTOR_SIZE = 384
 COLLECTION_NAME = "menu_items"
@@ -12,6 +16,19 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def get_embedding(text: str) -> list:
     return model.encode([text])[0].tolist()
+
+
+def parse_currency(value: Optional[str]) -> float:
+    if not value:
+        return 0.0
+    cleaned = value.replace(",", "")
+    matches = re.findall(r"[-+]?[0-9]*\.?[0-9]+", cleaned)
+    if not matches:
+        return 0.0
+    try:
+        return float(matches[0])
+    except ValueError:
+        return 0.0
 
 async def ingest():
     await create_tables()
@@ -23,25 +40,62 @@ async def ingest():
             data = json.load(f)
         restaurant_data = RestaurantData(**data)
         rest = restaurant_data.restaurant
-        rest_payload = rest.model_dump()
-        if rest_payload.get("cuisine"):
-            rest_payload["cuisine"] = rest_payload["cuisine"].lower()
+        address_line = rest.address.as_string()
+        city = rest.address.city or ""
+        state = rest.address.state or ""
+        location = rest.location or None
+        latitude = float(location.latitude) if location and location.latitude is not None else 0.0
+        longitude = float(location.longitude) if location and location.longitude is not None else 0.0
+        cuisine_label = rest.cuisine_label()
+        rating_value = restaurant_data.primary_rating()
+        review_count = restaurant_data.primary_review_count()
+        catering = rest.catering_info
+        contact = rest.contact
+
+        rest_payload = {
+            "name": rest.name,
+            "address": address_line,
+            "city": city,
+            "state": state,
+            "latitude": latitude,
+            "longitude": longitude,
+            "cuisine": cuisine_label,
+            "rating": rating_value,
+            "review_count": review_count,
+            "on_time_rate": "N/A",
+            "delivery_fee": parse_currency(catering.delivery_fee if catering else None),
+            "delivery_minimum": parse_currency(catering.delivery_minimum if catering else None),
+        }
+
         rest_id = await insert_restaurant(rest_payload)
         points = []
-        for category, items in restaurant_data.menu.items():
-            for item in items:
+        for category_group in restaurant_data.menu.items:
+            category = category_group.category
+            for item in category_group.items:
                 external_id = f"{rest.name}_{category}_{item.name}".replace(" ", "_")
                 menu_item = {
                     "restaurant_id": rest_id,
                     "category": category,
                     "name": item.name,
                     "description": getattr(item, "description", None),
-                    "price": item.price,
+                    "price": float(item.price),
                     "external_id": external_id,
                 }
                 await insert_menu_item(menu_item)
                 item_description = getattr(item, "description", "")
-                text_blob = f"{rest.name} {category} {item.name} {item_description}".strip()
+                text_blob = " ".join(
+                    filter(
+                        None,
+                        [
+                            rest.name,
+                            rest.type,
+                            category,
+                            item.name,
+                            item_description,
+                            rest.description,
+                        ],
+                    )
+                ).strip()
                 embedding = get_embedding(text_blob)
                 points.append({
                     "id": external_id,
@@ -49,18 +103,26 @@ async def ingest():
                     "payload": {
                         "restaurant_id": rest_id,
                         "restaurant_name": rest.name,
-                        "address": rest.address,
-                        "city": rest_payload.get("city"),
-                        "state": rest_payload.get("state"),
-                        "latitude": rest_payload.get("latitude"),
-                        "longitude": rest_payload.get("longitude"),
-                        "cuisine": rest_payload.get("cuisine"),
-                        "rating": rest.rating,
-                        "review_count": rest.review_count,
+                        "restaurant_type": rest.type or "",
+                        "address": address_line,
+                        "city": city,
+                        "state": state,
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "cuisine": cuisine_label,
+                        "rating": rating_value,
+                        "review_count": review_count,
+                        "restaurant_description": rest.description,
+                        "restaurant_history": rest.history,
+                        "contact_phone": contact.phone if contact else None,
+                        "contact_website": contact.website if contact else None,
+                        "rewards": catering.rewards if catering else None,
+                        "delivery_fee": rest_payload["delivery_fee"],
+                        "delivery_minimum": rest_payload["delivery_minimum"],
                         "category": category,
                         "name": item.name,
                         "description": item_description,
-                        "price": item.price,
+                        "price": float(item.price),
                         "text": text_blob,
                     }
                 })

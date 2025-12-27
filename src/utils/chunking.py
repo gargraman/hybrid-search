@@ -9,19 +9,29 @@ def chunk_restaurant_json(json_data: Dict) -> List[Dict]:
     doc = Document.from_dict(json_data)
     restaurant = json_data.get('restaurant', {})
     restaurant_id = restaurant.get('name', '').replace(' ', '_')
-    chunks = []
-    for category, items in json_data.get('menu', {}).items():
-        for item in items:
+    menu = json_data.get('menu', {})
+    items_groups = menu.get('items', []) if isinstance(menu, dict) else []
+
+    chunks: List[Dict] = []
+    for group in items_groups:
+        category = group.get('category', 'uncategorized')
+        for item in group.get('items', []):
+            item_name = item.get('name', 'item').replace(' ', '_')
+            description = item.get('description', '')
+            price = item.get('price', 0)
             chunk = {
-                "id": f"{restaurant_id}_{category}_{item['name'].replace(' ', '_')}",
-                "text": f"Restaurant: {restaurant.get('name')} | Category: {category} | Item: {item['name']} | Description: {item.get('description', '')} | Price: ${item['price']}",
+                "id": f"{restaurant_id}_{category}_{item_name}",
+                "text": (
+                    f"Restaurant: {restaurant.get('name')} | Category: {category} | "
+                    f"Item: {item.get('name')} | Description: {description} | Price: ${price}"
+                ),
                 "metadata": {
                     "restaurant_id": restaurant_id,
                     "restaurant_name": restaurant.get('name'),
                     "category": category,
-                    "item_name": item['name'],
-                    "price": item['price'],
-                    "description": item.get('description', '')
+                    "item_name": item.get('name'),
+                    "price": price,
+                    "description": description,
                 }
             }
             chunks.append(chunk)

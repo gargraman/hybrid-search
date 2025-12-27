@@ -72,6 +72,12 @@ async def search_menu_items(query_vector, top_k=10):
             "on_time_rate": payload.get("on_time_rate") or (row["on_time_rate"] if row else None),
             "delivery_fee": payload.get("delivery_fee") or (row["delivery_fee"] if row else None),
             "delivery_minimum": payload.get("delivery_minimum") or (row["delivery_minimum"] if row else None),
+            "restaurant_type": payload.get("restaurant_type"),
+            "restaurant_description": payload.get("restaurant_description"),
+            "restaurant_history": payload.get("restaurant_history"),
+            "contact_phone": payload.get("contact_phone"),
+            "contact_website": payload.get("contact_website"),
+            "rewards": payload.get("rewards"),
         }
         text_blob = payload.get("text")
         if not text_blob:
@@ -87,6 +93,12 @@ async def search_menu_items(query_vector, top_k=10):
             metadata["price"] = float(metadata["price"])
         if metadata.get("rating") is not None:
             metadata["rating"] = float(metadata["rating"])
+        if metadata.get("review_count") is not None:
+            metadata["review_count"] = int(metadata["review_count"])
+        if metadata.get("delivery_fee") is not None:
+            metadata["delivery_fee"] = float(metadata["delivery_fee"])
+        if metadata.get("delivery_minimum") is not None:
+            metadata["delivery_minimum"] = float(metadata["delivery_minimum"])
         if metadata.get("cuisine"):
             metadata["cuisine"] = str(metadata["cuisine"]).lower()
         merged.append(

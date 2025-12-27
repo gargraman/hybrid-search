@@ -1,0 +1,290 @@
+{
+  "restaurant": {
+    "name": "Sam LaGrassa's",
+    "type": "Catering & Sandwich Shop",
+    "address": {
+      "street": "44 Province St",
+      "city": "Boston",
+      "state": "MA",
+      "zip": "02108",
+      "country": "USA"
+    },
+    "contact": {
+      "phone": "617-357-6862",
+      "website": "https://samlagrassas.com/"
+    },
+    "location": {
+      "latitude": null,
+      "longitude": null
+    },
+    "description": "Family-owned since 1968, legendary gourmet sandwiches and corporate catering.",
+    "history": "Founded in 1968. Known nationwide for premium pastrami sandwiches and corporate catering. Family-operated with handcrafted ingredients.",
+    "hours": {
+      "delivery_hours": "Mon-Fri: 10am-2pm",
+      "takeout_hours": "Mon-Fri: 10am-2pm"
+    },
+    "catering_info": {
+      "on_ezcater_since": "February 29, 2008",
+      "delivery_fee": "USD 0 & up",
+      "delivery_minimum": "USD 30.00",
+      "delivery_method": "Caterer’s driver",
+      "group_order": true,
+      "rewards": "1X Rewards"
+    }
+  },
+  "ratings": {
+    "ezCater_rating": 4.9,
+    "ezCater_review_count": 1748,
+    "tripadvisor_rating": 4.7,
+    "tripadvisor_review_count": 1597,
+    "average_rating": 4.8,
+    "top_review_sites": [
+      "ezCater",
+      "TripAdvisor",
+      "Yelp",
+      "Grubhub"
+    ]
+  },
+  "top_reviews": [
+    {
+      "source": "ezCater",
+      "summary": "Can't go wrong with Sam’s! Always order again, sandwiches fresh and delicious.",
+      "date": "6 months ago"
+    },
+    {
+      "source": "ezCater",
+      "summary": "Whole company order for 200 people; food was demolished. Roast Beef and Cuban raved about.",
+      "date": "6 months ago"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Expensive but worth it; best Reuben/pastrami and efficient service.",
+      "date": "Oct 2025"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Sandwich large and delicious; grilled veggie sandwich very good.",
+      "date": "Aug 2025"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Probably the best Reuben ever had. Generous portion.",
+      "date": "Jul 2025"
+    },
+    {
+      "source": "Grubhub",
+      "summary": "Reliable good sandwiches!",
+      "date": "5 days ago"
+    },
+    {
+      "source": "Yelp",
+      "summary": "Huge catering delivery; friendly staff and fast order pickup.",
+      "date": "Recent"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Best sandwiches worldwide; Chipotle Pastrami amazing.",
+      "date": "May 2023"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Large and delicious sandwich; worth the price.",
+      "date": "Jul 2022"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Great sandwiches but pricey.",
+      "date": "Oct 2024"
+    }
+  ],
+  "menu": {
+    "categories": [
+      "All-in-One Orders",
+      "Luncheon Packages",
+      "Bagged Lunches",
+      "Chicken Sandwiches",
+      "Black Angus Roast Beef Sandwiches",
+      "Specialty Sandwiches",
+      "World Famous Rumanian Pastrami Sandwiches",
+      "Build Your Own Sandwiches",
+      "Vegetarian Sandwiches & Wraps",
+      "Gluten-Free Wraps",
+      "Salads",
+      "Sides",
+      "Desserts",
+      "Beverages"
+    ],
+    "items": [
+      {
+        "category": "Luncheon Packages",
+        "items": [
+          {
+            "name": "Medley Deluxe Sandwich Lunch Package",
+            "description": "Choice of sandwiches with potato chips, dessert, beverage. Sandwiches cut in half and labeled.",
+            "price": 35.50
+          },
+          {
+            "name": "Corporate Deluxe Sandwich Lunch Package",
+            "description": "Choice of sandwiches with garden salad, pasta salad, chips, dessert, beverage.",
+            "price": 45.50
+          }
+        ]
+      },
+      {
+        "category": "Bagged Lunches",
+        "items": [
+          {
+            "name": "Medley Deluxe Bagged Lunch",
+            "description": "Individually bagged sandwich, chips, dessert, assorted drinks.",
+            "price": 37.50
+          },
+          {
+            "name": "Corporate Deluxe Bagged Lunch",
+            "description": "Individual sandwich, garden salad, pasta salad, chips, dessert, drinks.",
+            "price": 47.50
+          }
+        ]
+      },
+      {
+        "category": "Chicken Sandwiches",
+        "items": [
+          {"name": "Chicken Pesto Sandwich", "price": 24.95},
+          {"name": "Chicken Cutlet Parmigiana Sandwich", "price": 23.95},
+          {"name": "Spicy Cutlet Sandwich", "price": 23.95},
+          {"name": "Buffalo Chicken Sandwich", "price": 23.95},
+          {"name": "Chicken Classic Sandwich", "price": 24.95},
+          {"name": "Chicken Mafia Sandwich", "price": 24.95},
+          {"name": "Country Chicken Sandwich", "price": 21.95},
+          {"name": "Santa Fe Chicken", "price": 25.95},
+          {"name": "The Chopper Sandwich", "price": 25.95},
+          {"name": "Loco Chicken Sandwich", "price": 27.95},
+          {"name": "Jalapeño Chicken Sandwich", "price": 25.95}
+        ]
+      },
+      {
+        "category": "Black Angus Roast Beef Sandwiches",
+        "items": [
+          {"name": "Roast Beef Blues Sandwich", "price": 21.95},
+          {"name": "Roast Beef Peppers Sandwich", "price": 24.95},
+          {"name": "Texas Beef Sandwich", "price": 24.95},
+          {"name": "Sam's Three Way Sandwich", "price": 23.95}
+        ]
+      },
+      {
+        "category": "Specialty Sandwiches",
+        "items": [
+          {"name": "Asiago Turkey Sandwich", "price": 21.95},
+          {"name": "Reuben Sandwich", "price": 25.95},
+          {"name": "Cuban Sandwich", "price": 20.95},
+          {"name": "Italiano Sandwich", "price": 24.95},
+          {"name": "Triple Club Sandwich", "price": 22.95},
+          {"name": "Corned Beef Rachel Sandwich", "price": 25.95}
+        ]
+      },
+      {
+        "category": "World Famous Rumanian Pastrami Sandwiches",
+        "items": [
+          {"name": "Chipotle Pastrami Sandwich", "price": 28.95},
+          {"name": "Pastrami Traveler Sandwich", "price": 27.95},
+          {"name": "Pastrami Po'Boy Sandwich", "price": 26.95},
+          {"name": "Pastrami Diablo Sandwich", "price": 29.95},
+          {"name": "Pastrami Rachel Sandwich", "price": 27.95},
+          {"name": "Pastrami Reuben Sandwich", "price": 27.95},
+          {"name": "Southwestern Pastrami Sandwich", "price": 28.95},
+          {"name": "Pastrami Caprese Sandwich", "price": 29.95},
+          {"name": "BBQ Pastrami Sandwich", "price": 28.95}
+        ]
+      },
+      {
+        "category": "Build Your Own Sandwiches",
+        "items": [
+          {"name": "Roast Breast of Turkey Sandwich", "price": 18.95},
+          {"name": "Chunky Chicken Salad Sandwich", "price": 16.95},
+          {"name": "Grilled Chicken Sandwich", "price": 17.95},
+          {"name": "White Meat Tuna Fish Sandwich", "price": 18.95},
+          {"name": "Honey Ham Sandwich", "price": 17.95},
+          {"name": "Black Angus Roast Beef Sandwich", "price": 18.95},
+          {"name": "Rumanian Pastrami Sandwich", "price": 26.95},
+          {"name": "Corned Beef Sandwich", "price": 24.95}
+        ]
+      },
+      {
+        "category": "Vegetarian Sandwiches & Wraps",
+        "items": [
+          {"name": "Vegetable Wrap", "price": 17.95},
+          {"name": "Buffalo Mozzarella Sandwich", "price": 16.95},
+          {"name": "Eggplant & Peppers w/ Mushrooms & Cheese Sandwich", "price": 16.95},
+          {"name": "Vegan Wrap", "price": 19.95}
+        ]
+      },
+      {
+        "category": "Gluten-Free Wraps",
+        "items": [
+          {"name": "Gluten-Free Asiago Turkey Wrap", "price": 22.95},
+          {"name": "Gluten-Free Chicken Classic Wrap", "price": 25.95},
+          {"name": "Gluten-Free Italiano Wrap", "price": 25.95},
+          {"name": "Gluten-Free Roast Beef Blues Wrap", "price": 22.95},
+          {"name": "Gluten-Free Pastrami Diablo Wrap", "price": 30.95}
+        ]
+      },
+      {
+        "category": "Salads",
+        "items": [
+          {"name": "Garden Salad Tray", "price": 23.00},
+          {"name": "Greek Salad", "price": 15.95},
+          {"name": "Greek Salad Tray", "price": 26.00},
+          {"name": "Caesar Salad", "price": 12.95},
+          {"name": "Southwest Salad", "price": 24.95},
+          {"name": "Caesar Salad Tray", "price": 26.00},
+          {"name": "Garden Salad", "price": 10.95}
+        ]
+      },
+      {
+        "category": "Sides",
+        "items": [
+          {"name": "Bag of Chips", "price": 2.50},
+          {"name": "Pasta Primavera Tray", "price": 35.70},
+          {"name": "Fresh Fruit Salad Tray", "price": 35.70},
+          {"name": "Potato Salad Tray", "price": 31.50},
+          {"name": "Coleslaw Tray", "price": 31.50}
+        ]
+      },
+      {
+        "category": "Desserts",
+        "items": [
+          {"name": "Chocolate Chip Cookie", "price": 3.95},
+          {"name": "M&M Cookie", "price": 3.95},
+          {"name": "Oatmeal Raisin Cookie", "price": 3.95},
+          {"name": "Sugar Cookie", "price": 3.95},
+          {"name": "Fudge Nut Brownie", "price": 3.95},
+          {"name": "7-Layer Bar", "price": 3.95},
+          {"name": "Walnut Chocolate Chip Cookie", "price": 3.95}
+        ]
+      },
+      {
+        "category": "Beverages",
+        "items": [
+          {"name": "Poland Springs Water", "price": 2.75},
+          {"name": "Diet Coke Can", "price": 2.75},
+          {"name": "Raspberry-Lime Poland Springs", "price": 2.75},
+          {"name": "Ginger Ale Can", "price": 2.75},
+          {"name": "Sprite Can", "price": 2.75},
+          {"name": "Lemon Poland Springs Seltzer", "price": 2.75},
+          {"name": "Lemon Snapple", "price": 2.95},
+          {"name": "Coke Can", "price": 2.75},
+          {"name": "Carbonated Poland Springs Water", "price": 2.75},
+          {"name": "Diet Sprite Can", "price": 2.75},
+          {"name": "Root Beer Can", "price": 2.75}
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "source_url": "https://www.ezcater.com/catering/sam-lagrassas-boston?fulfillmentDetailId=5316ca9c-10dd-4bbf-86a4-859ad4d2358a",
+    "extraction_date": "2025-12-27",
+    "derived_fields": {
+      "average_rating": "Computed from ezCater & Tripadvisor values",
+      "top_review_sites_count": 4
+    }
+  }
+}
