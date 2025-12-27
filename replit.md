@@ -23,7 +23,7 @@ This is an AI-powered hybrid search engine for restaurant menus that combines se
 ### Backend Components
 - **FastAPI**: RESTful API server running on port 5000
 - **Search Engine**: Hybrid search combining:
-  - Semantic search via ChromaDB (vector database)
+  - Semantic search via Qdrant (vector database)
   - Keyword search via Whoosh (local search index)
   - Optional Elasticsearch support (not configured)
 - **Database**: PostgreSQL for metadata storage
@@ -67,7 +67,7 @@ The application supports two modes:
 ## Known Limitations
 
 1. **Agent Orchestration Disabled**: The BeeAI framework version has compatibility issues, so advanced LLM-powered features are currently disabled
-2. **External Services Not Running**: Qdrant and Elasticsearch are configured but not running (using ChromaDB and Whoosh instead)
+2. **External Services Not Running**: Qdrant and PostgreSQL are required for semantic search; ensure both services are available alongside Whoosh
 3. **No Data Ingested**: The search indices need to be populated with restaurant data
 4. **macOS Packages Removed**: pyobjc packages removed for Linux compatibility
 
@@ -91,5 +91,5 @@ The application supports two modes:
 
 ## Development Notes
 - The application is designed to work gracefully even when external services (Qdrant, Elasticsearch, LLM APIs) are unavailable
-- All search fallbacks to local ChromaDB and Whoosh indices
+- All search fallbacks to local Whoosh indices; semantic search relies on Qdrant/PostgreSQL payloads
 - The codebase supports easy extension with new search backends and data sources

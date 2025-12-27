@@ -1,79 +1,177 @@
+import asyncio
+from typing import Dict, List, Optional
+
 from config.settings import settings
-import chromadb
-import numpy as np
+from src.db.qdrant import get_embedding
+from src.search.qdrant_postgres_search import search_menu_items
 from whoosh.index import open_dir
-from whoosh.qparser import QueryParser
-from elasticsearch import Elasticsearch
-from typing import List, Dict, Optional
-from sentence_transformers import SentenceTransformer
+from whoosh.qparser import MultifieldParser
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
 
-def get_embedding(text: str) -> list:
-    return model.encode([text])[0].tolist()
+def filter_results(
+    results: List[Dict],
+    price_max: Optional[float] = None,
+    dietary: Optional[str] = None,
+    location: Optional[str] = None,
+) -> List[Dict]:
+    filtered: List[Dict] = []
+    dietary_term = dietary.lower() if dietary else None
+    location_term = location.lower() if location else None
 
-def filter_results(results: List[Dict], price_max: Optional[float] = None, dietary: Optional[str] = None, location: Optional[str] = None) -> List[Dict]:
-    filtered = []
     for res in results:
         meta = res["metadata"]
-        if price_max and meta.get("price", 0) > price_max:
+        price = float(meta.get("price", 0))
+        if price_max is not None and price > price_max:
             continue
-        if dietary and dietary.lower() not in meta.get("text", "").lower():
-            continue  # Simple check, can improve
-        if location and location.lower() not in meta.get("address", "").lower():
+        description = (meta.get("description") or "").lower()
+        text_blob = (meta.get("text") or "").lower()
+        if dietary_term and dietary_term not in description and dietary_term not in text_blob:
             continue
+        if location_term:
+            address_blob = " ".join([
+                meta.get("address", ""),
+                meta.get("city", ""),
+                meta.get("state", ""),
+            ]).lower()
+            if location_term not in address_blob:
+                continue
         filtered.append(res)
     return filtered
 
+
+def _normalize_scores(results: List[Dict]) -> List[Dict]:
+    if not results:
+        return []
+    scores = [float(res.get("score", 0.0)) for res in results]
+    max_score = max(scores)
+    min_score = min(scores)
+    if max_score == min_score:
+        return [{**res, "normalized_score": 1.0} for res in results]
+    normalized: List[Dict] = []
+    for res, score in zip(results, scores):
+        normalized_score = (score - min_score) / (max_score - min_score)
+        normalized.append({**res, "normalized_score": normalized_score})
+    return normalized
+
+
+async def _semantic_search_async(query: str, top_k: int) -> List[Dict]:
+    query_vector = get_embedding(query)
+    results = await search_menu_items(query_vector, top_k)
+    enriched: List[Dict] = []
+    for item in results:
+        metadata = item.get("metadata", {})
+        metadata.setdefault(
+            "text",
+            " ".join(filter(None, [metadata.get("name"), metadata.get("description")])),
+        )
+        enriched.append({
+            "id": item.get("id"),
+            "score": float(item.get("score", 0.0)),
+            "metadata": metadata,
+        })
+    return enriched
+
+
 def semantic_search(query: str, top_k: int = 10) -> List[Dict]:
-    client = chromadb.PersistentClient(path=settings.chroma_path)
-    collection = client.get_collection("menu_items")
-    query_embedding = model.encode([query])[0].tolist()
-    results = collection.query(query_embeddings=[query_embedding], n_results=top_k)
-    return [{"id": id, "score": 1 - score, "metadata": meta} for id, score, meta in zip(results["ids"][0], results["distances"][0], results["metadatas"][0])]
-
-def keyword_search_whoosh(query: str, top_k: int = 10) -> List[Dict]:
-    ix = open_dir(settings.whoosh_index_path)
-    with ix.searcher() as searcher:
-        qp = QueryParser("text", ix.schema)
-        q = qp.parse(query)
-        results = searcher.search(q, limit=top_k)
-        return [{"id": hit["id"], "score": hit.score, "metadata": {"restaurant": hit["restaurant"], "price": hit["price"]}} for hit in results]
-
-def keyword_search_es(query: str, top_k: int = 10) -> List[Dict]:
     try:
-        es = Elasticsearch([{"host": settings.es_host, "port": settings.es_port, "scheme": settings.es_scheme}])
-        body = {
-            "query": {
-                "multi_match": {
-                    "query": query,
-                    "fields": ["text", "restaurant"]
-                }
-            },
-            "size": top_k
-        }
-        results = es.search(index="menu_items", body=body)
-        return [{"id": hit["_id"], "score": hit["_score"], "metadata": hit["_source"]} for hit in results["hits"]["hits"]]
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        new_loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(new_loop)
+            return new_loop.run_until_complete(_semantic_search_async(query, top_k))
+        except Exception:
+            return []
+        finally:
+            new_loop.close()
+            asyncio.set_event_loop(loop)
+
+    try:
+        return asyncio.run(_semantic_search_async(query, top_k))
     except Exception:
         return []
 
-def hybrid_search(query: str, top_k: int = 10, price_max: Optional[float] = None, dietary: Optional[str] = None, location: Optional[str] = None) -> List[Dict]:
-    # Combine semantic and keyword results
-    semantic = semantic_search(query, top_k * 2)  # Get more to filter
-    keyword = keyword_search_whoosh(query, top_k * 2)
-    # Combine
-    combined = {}
-    for res in semantic + keyword:
-        id = res["id"]
-        if id not in combined:
-            combined[id] = {"id": id, "score": 0, "count": 0, "metadata": res["metadata"]}
-        combined[id]["score"] += res["score"]
-        combined[id]["count"] += 1
-    # Average score
-    for item in combined.values():
-        item["score"] /= item["count"]
-    # Sort by score
-    sorted_results = sorted(combined.values(), key=lambda x: x["score"], reverse=True)
-    # Apply filters
-    filtered_results = filter_results(sorted_results, price_max, dietary, location)
-    return filtered_results[:top_k]
+
+def keyword_search_whoosh(query: str, top_k: int = 10) -> List[Dict]:
+    try:
+        ix = open_dir(settings.whoosh_index_path)
+    except OSError:
+        return []
+    with ix.searcher() as searcher:
+        parser = MultifieldParser(["text", "restaurant", "cuisine", "category"], schema=ix.schema)
+        parsed_query = parser.parse(query)
+        hits = searcher.search(parsed_query, limit=top_k)
+        results: List[Dict] = []
+        for hit in hits:
+            price_value = hit.get("price")
+            rating_value = hit.get("rating")
+            latitude_value = hit.get("latitude")
+            longitude_value = hit.get("longitude")
+            metadata = {
+                "text": hit.get("text", ""),
+                "restaurant": hit.get("restaurant", ""),
+                "address": hit.get("address", ""),
+                "city": hit.get("city", ""),
+                "state": hit.get("state", ""),
+                "latitude": float(latitude_value) if latitude_value is not None else None,
+                "longitude": float(longitude_value) if longitude_value is not None else None,
+                "cuisine": hit.get("cuisine", ""),
+                "category": hit.get("category", ""),
+                "price": float(price_value) if price_value is not None else 0.0,
+                "rating": float(rating_value) if rating_value is not None else 0.0,
+                "description": hit.get("description", ""),
+            }
+            results.append({"id": hit.get("id"), "score": float(hit.score), "metadata": metadata})
+        return results
+
+
+def _merge_results(semantic: List[Dict], lexical: List[Dict]) -> List[Dict]:
+    semantic_norm = _normalize_scores(semantic)
+    lexical_norm = _normalize_scores(lexical)
+
+    combined: Dict[str, Dict] = {}
+
+    for source, entries in (("semantic", semantic_norm), ("lexical", lexical_norm)):
+        for entry in entries:
+            entry_id = entry["id"]
+            normalized_score = entry.get("normalized_score", 0.0)
+            entry_metadata = entry.get("metadata", {}) or {}
+            if entry_id not in combined:
+                combined[entry_id] = {
+                    "id": entry_id,
+                    "metadata": {k: v for k, v in entry_metadata.items() if v is not None},
+                    "scores": {},
+                }
+            combined_entry = combined[entry_id]
+            if entry_metadata:
+                cleaned_metadata = {k: v for k, v in entry_metadata.items() if v is not None}
+                combined_entry["metadata"].update(cleaned_metadata)
+            combined_entry["scores"][source] = normalized_score
+
+    merged_results: List[Dict] = []
+    for entry in combined.values():
+        score_components = entry["scores"]
+        averaged_score = sum(score_components.values()) / max(len(score_components), 1)
+        merged_results.append({
+            "id": entry["id"],
+            "score": averaged_score,
+            "metadata": entry["metadata"],
+        })
+    return sorted(merged_results, key=lambda item: item["score"], reverse=True)
+
+
+def hybrid_search(
+    query: str,
+    top_k: int = 10,
+    price_max: Optional[float] = None,
+    dietary: Optional[str] = None,
+    location: Optional[str] = None,
+) -> List[Dict]:
+    semantic_results = semantic_search(query, top_k * 2)
+    lexical_results = keyword_search_whoosh(query, top_k * 2)
+    merged = _merge_results(semantic_results, lexical_results)
+    filtered = filter_results(merged, price_max=price_max, dietary=dietary, location=location)
+    return filtered[:top_k]

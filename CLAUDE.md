@@ -15,10 +15,10 @@ pip install -r requirements.txt
 
 ### Data Ingestion
 ```bash
-# ChromaDB + Whoosh (original)
+# Whoosh (lexical ingestion)
 python src/ingest.py
 
-# Qdrant + PostgreSQL (alternative)
+# Qdrant + PostgreSQL (semantic ingestion)
 python src/ingest_qdrant_postgres.py
 ```
 
@@ -52,15 +52,14 @@ curl http://localhost:8000/metrics
 - **QualityAgent** (`src/agents/quality_agent.py`): Validates and filters search results for relevance, completeness, and safety
 - **VerificationAgent** (`src/agents/verification_agent.py`): Checks search results for factual accuracy and compliance with business rules
 
-### Search Implementation
-- **Hybrid Search** (`src/search/hybrid_search.py`): Combines semantic (ChromaDB) and keyword (Whoosh/Elasticsearch) search with filtering capabilities
-- **Qdrant + PostgreSQL Search** (`src/search/qdrant_postgres_search.py`): Alternative search implementation using Qdrant for vectors and PostgreSQL for metadata
-- **Semantic Search**: ChromaDB with deterministic hash-based embeddings (POC limitation) or Qdrant with proper embeddings
+	- **Hybrid Search** (`src/search/hybrid_search.py`): Combines semantic (Qdrant) and keyword (Whoosh) search with filtering capabilities
+	- **Qdrant + PostgreSQL Search** (`src/search/qdrant_postgres_search.py`): Alternative search implementation using Qdrant for vectors and PostgreSQL for metadata
+	- **Semantic Search**: Qdrant with sentence-transformer embeddings persisted via PostgreSQL/Qdrant ingestion
 - **Keyword Search**: Whoosh (local) and Elasticsearch (optional) with graceful fallbacks
 
 ### Data Flow
 1. JSON restaurant data ingestion → flattened menu items
-2. Indexing in multiple backends (ChromaDB/Qdrant for vectors, Whoosh/PostgreSQL for keywords/metadata)
+2. Indexing in multiple backends (Qdrant for vectors, Whoosh/PostgreSQL for lexical + metadata)
 3. Query parsing with LLMs → structured filters
 4. Hybrid search with filtering → combined results
 5. Quality validation and verification checks → filtered results
@@ -69,7 +68,7 @@ curl http://localhost:8000/metrics
 ## Technology Stack
 
 - **Python 3.13** with FastAPI for REST API
-- **Vector Databases**: ChromaDB (original) / Qdrant (alternative) for vector search
+	- **Vector Database**: Qdrant for vector search
 - **Keyword/Metadata Stores**: Whoosh (local) / Elasticsearch (optional) / PostgreSQL (alternative)
 - **Embeddings**: Deterministic hash-based (POC) or sentence-transformers (production-ready)
 - **BeeAI Framework** for multi-agent architecture
@@ -100,7 +99,7 @@ Database configuration in `config/db_config.py`:
 - **Embeddings**: Currently using deterministic hash-based embeddings due to SSL/network constraints. Modern sentence-transformers are now available in requirements.txt for production use
 - **LLMs**: Requires API keys for DeepSeek or OpenAI to enable query parsing and ranking
 - **SSL Issues**: Environment has SSL verification issues preventing model downloads
-- **Database Options**: Two search architectures available - choose ChromaDB+Whoosh for simplicity or Qdrant+PostgreSQL for production scalability
+	- **Database Stack**: Qdrant + PostgreSQL + Whoosh for hybrid search at scale
 - **No Test Suite**: Tests directory exists but is empty
 - **Monitoring**: Basic Prometheus metrics implemented; consider adding agent-level metrics for production
 
@@ -112,7 +111,7 @@ src/
 ├── models/          # Data models (restaurant.py)
 ├── search/          # Core search functionality (hybrid_search.py, qdrant_postgres_search.py)
 ├── db/              # Database integrations (qdrant.py, postgres.py)
-├── ingest.py        # ChromaDB + Whoosh ingestion script
+├── ingest.py        # Whoosh ingestion script (lexical)
 ├── ingest_qdrant_postgres.py # Qdrant + PostgreSQL ingestion script
 └── main.py          # FastAPI application entry point
 

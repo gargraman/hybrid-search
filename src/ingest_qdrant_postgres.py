@@ -23,32 +23,45 @@ async def ingest():
             data = json.load(f)
         restaurant_data = RestaurantData(**data)
         rest = restaurant_data.restaurant
-        rest_id = await insert_restaurant(rest.dict())
+        rest_payload = rest.model_dump()
+        if rest_payload.get("cuisine"):
+            rest_payload["cuisine"] = rest_payload["cuisine"].lower()
+        rest_id = await insert_restaurant(rest_payload)
         points = []
         for category, items in restaurant_data.menu.items():
             for item in items:
+                external_id = f"{rest.name}_{category}_{item.name}".replace(" ", "_")
                 menu_item = {
                     "restaurant_id": rest_id,
                     "category": category,
                     "name": item.name,
                     "description": getattr(item, "description", None),
-                    "price": item.price
+                    "price": item.price,
+                    "external_id": external_id,
                 }
                 await insert_menu_item(menu_item)
-                embedding = get_embedding(f"{rest.name} {category} {item.name} {item.description if hasattr(item, 'description') else ''}")
+                item_description = getattr(item, "description", "")
+                text_blob = f"{rest.name} {category} {item.name} {item_description}".strip()
+                embedding = get_embedding(text_blob)
                 points.append({
-                    "id": f"{rest.name}_{category}_{item.name}".replace(" ", "_"),
+                    "id": external_id,
                     "vector": embedding,
                     "payload": {
                         "restaurant_id": rest_id,
                         "restaurant_name": rest.name,
                         "address": rest.address,
+                        "city": rest_payload.get("city"),
+                        "state": rest_payload.get("state"),
+                        "latitude": rest_payload.get("latitude"),
+                        "longitude": rest_payload.get("longitude"),
+                        "cuisine": rest_payload.get("cuisine"),
                         "rating": rest.rating,
                         "review_count": rest.review_count,
                         "category": category,
                         "name": item.name,
-                        "description": getattr(item, "description", None),
-                        "price": item.price
+                        "description": item_description,
+                        "price": item.price,
+                        "text": text_blob,
                     }
                 })
         upsert_vectors(COLLECTION_NAME, points)

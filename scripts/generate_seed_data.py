@@ -7,26 +7,26 @@ SEED_COUNT = 200
 OUTPUT_DIR = Path("input/seed")
 
 CITIES = [
-    ("New York", "NY"),
-    ("San Francisco", "CA"),
-    ("Los Angeles", "CA"),
-    ("Chicago", "IL"),
-    ("Austin", "TX"),
-    ("Boston", "MA"),
-    ("Seattle", "WA"),
-    ("Denver", "CO"),
-    ("Atlanta", "GA"),
-    ("Miami", "FL"),
-    ("Portland", "OR"),
-    ("Dallas", "TX"),
-    ("Houston", "TX"),
-    ("Philadelphia", "PA"),
-    ("Phoenix", "AZ"),
-    ("San Diego", "CA"),
-    ("Nashville", "TN"),
-    ("Charlotte", "NC"),
-    ("Minneapolis", "MN"),
-    ("Washington", "DC"),
+    ("New York", "NY", 40.7128, -74.0060),
+    ("San Francisco", "CA", 37.7749, -122.4194),
+    ("Los Angeles", "CA", 34.0522, -118.2437),
+    ("Chicago", "IL", 41.8781, -87.6298),
+    ("Austin", "TX", 30.2672, -97.7431),
+    ("Boston", "MA", 42.3601, -71.0589),
+    ("Seattle", "WA", 47.6062, -122.3321),
+    ("Denver", "CO", 39.7392, -104.9903),
+    ("Atlanta", "GA", 33.7490, -84.3880),
+    ("Miami", "FL", 25.7617, -80.1918),
+    ("Portland", "OR", 45.5152, -122.6784),
+    ("Dallas", "TX", 32.7767, -96.7970),
+    ("Houston", "TX", 29.7604, -95.3698),
+    ("Philadelphia", "PA", 39.9526, -75.1652),
+    ("Phoenix", "AZ", 33.4484, -112.0740),
+    ("San Diego", "CA", 32.7157, -117.1611),
+    ("Nashville", "TN", 36.1627, -86.7816),
+    ("Charlotte", "NC", 35.2271, -80.8431),
+    ("Minneapolis", "MN", 44.9778, -93.2650),
+    ("Washington", "DC", 38.9072, -77.0369),
 ]
 
 CUISINES: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
@@ -268,7 +268,7 @@ def rand_range(low: float, high: float, precision: int = 2) -> float:
 
 def build_restaurant(index: int) -> Dict[str, Any]:
     cuisine_name, cuisine_data = random.choice(list(CUISINES.items()))
-    city, state = random.choice(CITIES)
+    city, state, latitude, longitude = random.choice(CITIES)
     restaurant_name = f"{cuisine_name.title()} Table {index:03d}"
 
     delivery_hours = {"mon_sun": random.choice(DELIVERY_WINDOWS)}
@@ -278,6 +278,11 @@ def build_restaurant(index: int) -> Dict[str, Any]:
         "name": restaurant_name,
         "address": f"{random.randint(100, 999)} {random.choice(['Main St', 'Market St', 'Elm St', 'Broadway', 'Sunset Blvd', 'Lakeview Ave'])}, {city}, {state} {random.randint(10000, 99999)}",
         "rating": rand_range(3.6, 4.9, 1),
+        "cuisine": cuisine_name,
+        "city": city,
+        "state": state,
+        "latitude": latitude,
+        "longitude": longitude,
         "review_count": random.randint(80, 2600),
         "on_time_rate": f"{random.randint(90, 100)}%",
         "delivery_fee": rand_range(0, 45, 2),

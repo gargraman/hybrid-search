@@ -2,6 +2,11 @@
   "restaurant": {
     "name": "QDOBA Mexican Eats",
     "address": "101 Causeway St, Boston, MA 02114",
+    "city": "Boston",
+    "state": "MA",
+    "latitude": 42.3601,
+    "longitude": -71.0589,
+    "cuisine": "mexican",
     "rating": 4.8,
     "review_count": 189,
     "on_time_rate": "99%",

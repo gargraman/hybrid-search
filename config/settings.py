@@ -8,13 +8,7 @@ class Settings:
     deepseek_base_url: str = "https://api.deepseek.com"
     openai_base_url: str = "https://api.openai.com/v1"
 
-    # Elasticsearch
-    es_host: str = os.getenv("ES_HOST", "localhost")
-    es_port: int = int(os.getenv("ES_PORT", "9200"))
-    es_scheme: str = os.getenv("ES_SCHEME", "http")
-
-    # Chroma
-    chroma_path: str = "./chroma_db"
+    # Deprecated integrations (Chroma, Elasticsearch) intentionally removed
 
     # Whoosh
     whoosh_index_path: str = "./whoosh_index"

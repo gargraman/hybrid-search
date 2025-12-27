@@ -16,6 +16,11 @@ class RestaurantHours(BaseModel):
 class Restaurant(BaseModel):
     name: str
     address: str
+    city: Optional[str] = None
+    state: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    cuisine: Optional[str] = None
     rating: float
     review_count: int
     on_time_rate: str

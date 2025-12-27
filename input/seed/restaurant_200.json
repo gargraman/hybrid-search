@@ -2,6 +2,11 @@
   "restaurant": {
     "name": "Middle_Eastern Table 200",
     "address": "725 Lakeview Ave, Philadelphia, PA 14931",
+    "city": "Philadelphia",
+    "state": "PA",
+    "latitude": 39.9526,
+    "longitude": -75.1652,
+    "cuisine": "middle_eastern",
     "rating": 4.4,
     "review_count": 2127,
     "on_time_rate": "99%",
