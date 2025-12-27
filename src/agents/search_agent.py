@@ -1,16 +1,56 @@
+import json
 from pathlib import Path
+from typing import Dict, List, Optional
+
 from beeai_framework import Agent, LLM  # type: ignore
 from config.settings import settings
-from src.search.qdrant_postgres_search import search_menu_items
-from src.utils.docling_input import parse_restaurant_json_with_docling
-from src.db.qdrant import get_embedding
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+
+from src.db.qdrant import get_embedding
+from src.search.qdrant_postgres_search import search_menu_items
 
 class SearchResult(BaseModel):
     id: str
     score: float
     metadata: Dict
+
+def _summarize_restaurant(data: Dict) -> str:
+    restaurant = data.get("restaurant", {})
+    name = restaurant.get("name", "Unknown Restaurant")
+    type_ = restaurant.get("type") or ""
+    location = restaurant.get("address", {})
+    address = ", ".join(filter(None, [location.get("street"), location.get("city"), location.get("state")]))
+    ratings = data.get("ratings", {})
+    avg_rating = ratings.get("average_rating")
+    review_count = ratings.get("ezCater_review_count")
+
+    menu = data.get("menu", {})
+    groups = menu.get("items", []) if isinstance(menu, dict) else []
+    highlights: List[str] = []
+    for group in groups:
+        category = group.get("category", "Uncategorized")
+        item_names = [item.get("name") for item in group.get("items", []) if item.get("name")]
+        if item_names:
+            highlights.append(f"{category}: {', '.join(item_names[:3])}")
+        if len(highlights) >= 5:
+            break
+
+    lines = [f"{name} ({type_})" if type_ else name]
+    if address:
+        lines.append(f"Location: {address}")
+    if avg_rating is not None or review_count is not None:
+        rating_line = "Rating: "
+        rating_line += f"{avg_rating}" if avg_rating is not None else "N/A"
+        if review_count is not None:
+            rating_line += f" ({review_count} reviews)"
+        lines.append(rating_line)
+    if highlights:
+        lines.append("Highlights: " + "; ".join(highlights))
+    description = restaurant.get("description")
+    if description:
+        lines.append(f"Description: {description}")
+    return "\n".join(lines)
+
 
 def _load_llm_context(max_files: int = 20, max_chars: int = 8000) -> str:
     base_path = Path("input")
@@ -21,7 +61,9 @@ def _load_llm_context(max_files: int = 20, max_chars: int = 8000) -> str:
     total_chars = 0
     for json_file in sorted(base_path.rglob("*.json")):
         try:
-            context = parse_restaurant_json_with_docling(str(json_file))
+            with json_file.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            context = _summarize_restaurant(data)
         except Exception:
             continue
         segment = f"Source: {json_file}\n{context}"
@@ -48,7 +90,7 @@ class SearchAgent(Agent):
             )
         else:
             raise ValueError("No API key set for LLM")
-        # Load LLM context from available restaurant JSON files via docling
+        # Load LLM context from available restaurant JSON files
         self.llm_context = _load_llm_context()
         super().__init__(
             llm=llm,

@@ -7,7 +7,7 @@ This repository is a developer-focused proof-of-concept for an AI-powered hybrid
 - True hybrid search: semantic (vector, Qdrant) + keyword (Whoosh, Elasticsearch)
 - Multi-agent orchestration (BeeAI):
   - QueryParserAgent: LLM-powered query parsing
-  - SearchAgent: Hybrid search with context from docling-parsed JSON
+  - SearchAgent: Hybrid search with context assembled from structured JSON summaries
   - QualityAgent: LLM-based result validation
   - VerificationAgent: LLM-based business rule compliance
   - RankingAgent: LLM-powered relevance scoring
@@ -58,7 +58,7 @@ This repository is a developer-focused proof-of-concept for an AI-powered hybrid
 ## Architecture Overview
 
 - **Ingestion:**
-  - Parses and chunks JSON input with docling
+  - Parses and chunks JSON input using native schema-aware logic
   - Stores vectors in Qdrant, metadata in PostgreSQL
 - **Multi-Agent System:**
   - Orchestrator coordinates QueryParser, Search, Quality, Verification, and Ranking agents
@@ -83,7 +83,6 @@ This repository is a developer-focused proof-of-concept for an AI-powered hybrid
 - FastAPI (API)
 - BeeAI Framework (multi-agent)
 - DeepSeek/OpenAI (LLMs)
-- Docling (JSON parsing)
 - Prometheus, Loguru (monitoring/logging)
 
 ## Developer Notes

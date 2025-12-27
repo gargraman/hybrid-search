@@ -1,12 +1,10 @@
 import json
 from pathlib import Path
-from docling import Document  # type: ignore
-from typing import List, Dict, Union
+from typing import Dict, List, Union
 
 # Robust chunking for nested restaurant JSON
 
 def chunk_restaurant_json(json_data: Dict) -> List[Dict]:
-    doc = Document.from_dict(json_data)
     restaurant = json_data.get('restaurant', {})
     restaurant_id = restaurant.get('name', '').replace(' ', '_')
     menu = json_data.get('menu', {})
@@ -19,11 +17,19 @@ def chunk_restaurant_json(json_data: Dict) -> List[Dict]:
             item_name = item.get('name', 'item').replace(' ', '_')
             description = item.get('description', '')
             price = item.get('price', 0)
+            rating_info = json_data.get('ratings', {}) or {}
+            avg_rating = rating_info.get('average_rating')
+            review_count = rating_info.get('ezCater_review_count')
             chunk = {
                 "id": f"{restaurant_id}_{category}_{item_name}",
                 "text": (
-                    f"Restaurant: {restaurant.get('name')} | Category: {category} | "
-                    f"Item: {item.get('name')} | Description: {description} | Price: ${price}"
+                    f"Restaurant: {restaurant.get('name')} | "
+                    f"Category: {category} | "
+                    f"Item: {item.get('name')} | "
+                    f"Description: {description or 'N/A'} | "
+                    f"Price: ${price} | "
+                    f"Average Rating: {avg_rating if avg_rating is not None else 'N/A'} | "
+                    f"Reviews: {review_count if review_count is not None else 'N/A'}"
                 ),
                 "metadata": {
                     "restaurant_id": restaurant_id,
@@ -32,6 +38,8 @@ def chunk_restaurant_json(json_data: Dict) -> List[Dict]:
                     "item_name": item.get('name'),
                     "price": price,
                     "description": description,
+                    "average_rating": avg_rating,
+                    "review_count": review_count,
                 }
             }
             chunks.append(chunk)

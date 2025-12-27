@@ -132,7 +132,7 @@ src/
 ├── models/          # Data models (restaurant.py with geo fields)
 ├── search/          # Core search (hybrid_search.py with location filtering, qdrant_postgres_search.py)
 ├── db/              # Database integrations (qdrant.py, postgres.py with geo schema)
-├── utils/           # Utilities (chunking.py, docling_input.py)
+├── utils/           # Utilities (chunking.py)
 ├── ingest.py        # Whoosh ingestion script (lexical)
 ├── ingest_qdrant_postgres.py # Qdrant + PostgreSQL ingestion script
 └── main.py          # FastAPI application entry point
