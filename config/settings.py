@@ -13,4 +13,7 @@ class Settings:
     # Whoosh
     whoosh_index_path: str = "./whoosh_index"
 
+    # RRF settings
+    rrf_k: int = 60
+
 settings = Settings()

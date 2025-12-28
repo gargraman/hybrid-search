@@ -18,7 +18,6 @@ from src.search.hybrid_search import (
     semantic_search,
     hybrid_search,
     filter_results,
-    _normalize_scores,
     _merge_results
 )
 
@@ -619,54 +618,12 @@ class TestHelperFunctions:
         assert all("San Francisco" in r["metadata"]["city"] for r in filtered)
 
     @pytest.mark.unit
-    def test_normalize_scores_empty_list(self):
-        """
-        Test _normalize_scores with empty input.
-        """
-        result = _normalize_scores([])
-        assert result == []
-
-    @pytest.mark.unit
-    def test_normalize_scores_single_result(self):
-        """
-        Test _normalize_scores with single result (edge case).
-        """
-        results = [{"id": "1", "score": 0.5, "metadata": {}}]
-        normalized = _normalize_scores(results)
-
-        assert len(normalized) == 1
-        assert normalized[0]["normalized_score"] == 1.0
-
-    @pytest.mark.unit
-    def test_normalize_scores_multiple_results(self):
-        """
-        Test _normalize_scores with multiple results.
-
-        Validates min-max normalization is applied correctly.
-        """
-        results = [
-            {"id": "1", "score": 0.9, "metadata": {}},
-            {"id": "2", "score": 0.5, "metadata": {}},
-            {"id": "3", "score": 0.1, "metadata": {}},
-        ]
-        normalized = _normalize_scores(results)
-
-        # Max score should be normalized to 1.0
-        assert normalized[0]["normalized_score"] == 1.0
-
-        # Min score should be normalized to 0.0
-        assert normalized[2]["normalized_score"] == 0.0
-
-        # Middle score should be 0.5
-        assert abs(normalized[1]["normalized_score"] - 0.5) < 0.01
-
-    @pytest.mark.unit
     def test_merge_results_deduplicates_by_id(self):
         """
         Test _merge_results deduplicates results by ID.
 
         If same item appears in both semantic and lexical results,
-        it should appear once with averaged score.
+        it should appear once with RRF score.
         """
         semantic = [
             {"id": "item-1", "score": 0.9, "metadata": {"text": "Pizza", "price": 12.0}}

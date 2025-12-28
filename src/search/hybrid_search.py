@@ -39,21 +39,6 @@ def filter_results(
     return filtered
 
 
-def _normalize_scores(results: List[Dict]) -> List[Dict]:
-    if not results:
-        return []
-    scores = [float(res.get("score", 0.0)) for res in results]
-    max_score = max(scores)
-    min_score = min(scores)
-    if max_score == min_score:
-        return [{**res, "normalized_score": 1.0} for res in results]
-    normalized: List[Dict] = []
-    for res, score in zip(results, scores):
-        normalized_score = (score - min_score) / (max_score - min_score)
-        normalized.append({**res, "normalized_score": normalized_score})
-    return normalized
-
-
 async def _semantic_search_async(query: str, top_k: int) -> List[Dict]:
     query_vector = get_embedding(query)
     results = await search_menu_items(query_vector, top_k)
@@ -137,37 +122,43 @@ def keyword_search_whoosh(query: str, top_k: int = 10) -> List[Dict]:
 
 
 def _merge_results(semantic: List[Dict], lexical: List[Dict]) -> List[Dict]:
-    semantic_norm = _normalize_scores(semantic)
-    lexical_norm = _normalize_scores(lexical)
+    # Assign ranks based on order (1-based)
+    semantic_ranks = {item["id"]: rank + 1 for rank, item in enumerate(semantic)}
+    lexical_ranks = {item["id"]: rank + 1 for rank, item in enumerate(lexical)}
 
     combined: Dict[str, Dict] = {}
 
-    for source, entries in (("semantic", semantic_norm), ("lexical", lexical_norm)):
-        for entry in entries:
-            entry_id = entry["id"]
-            normalized_score = entry.get("normalized_score", 0.0)
-            entry_metadata = entry.get("metadata", {}) or {}
-            if entry_id not in combined:
-                combined[entry_id] = {
-                    "id": entry_id,
-                    "metadata": {k: v for k, v in entry_metadata.items() if v is not None},
-                    "scores": {},
-                }
-            combined_entry = combined[entry_id]
-            if entry_metadata:
-                cleaned_metadata = {k: v for k, v in entry_metadata.items() if v is not None}
-                combined_entry["metadata"].update(cleaned_metadata)
-            combined_entry["scores"][source] = normalized_score
+    # Collect all unique items
+    all_items = set(semantic_ranks.keys()) | set(lexical_ranks.keys())
 
-    merged_results: List[Dict] = []
-    for entry in combined.values():
-        score_components = entry["scores"]
-        averaged_score = sum(score_components.values()) / max(len(score_components), 1)
-        merged_results.append({
-            "id": entry["id"],
-            "score": averaged_score,
-            "metadata": entry["metadata"],
-        })
+    for item_id in all_items:
+        metadata = {}
+        # Merge metadata from both sources
+        semantic_meta = {}
+        lexical_meta = {}
+        if item_id in [s["id"] for s in semantic]:
+            semantic_meta = next(s["metadata"] for s in semantic if s["id"] == item_id)
+        if item_id in [l["id"] for l in lexical]:
+            lexical_meta = next(l["metadata"] for l in lexical if l["id"] == item_id)
+        metadata.update(semantic_meta)
+        metadata.update(lexical_meta)  # lexical overwrites if conflict
+
+        ranks = []
+        if item_id in semantic_ranks:
+            ranks.append(semantic_ranks[item_id])
+        if item_id in lexical_ranks:
+            ranks.append(lexical_ranks[item_id])
+
+        # Compute RRF score
+        rrf_score = sum(1 / (settings.rrf_k + rank) for rank in ranks)
+
+        combined[item_id] = {
+            "id": item_id,
+            "score": rrf_score,
+            "metadata": metadata,
+        }
+
+    merged_results = list(combined.values())
     return sorted(merged_results, key=lambda item: item["score"], reverse=True)
 
 
