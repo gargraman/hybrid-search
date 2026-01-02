@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from contextlib import asynccontextmanager
 from prometheus_client import Counter, Histogram, start_http_server
 from loguru import logger
+from uuid import uuid4, UUID
 import time
 import signal
 import asyncio
@@ -20,6 +21,27 @@ except Exception as e:
     logger.warning(f"Orchestrator not available: {e}. Using simple hybrid search.")
     USE_ORCHESTRATOR = False
     from src.search.hybrid_search import hybrid_search as hybrid_search_func
+
+# Try to import chat components
+try:
+    from src.agents.chat.chat_agent import ChatAgent
+    from src.agents.chat.memory_manager import ChatSessionManager
+    from src.models.conversation import (
+        ChatRequest, ChatResponse, SessionCreateResponse,
+        ConversationHistoryResponse, Message, MessageRole
+    )
+    from src.db.conversations import (
+        create_tables as create_chat_tables,
+        create_conversation,
+        get_conversation_by_session,
+        add_message as db_add_message,
+        get_messages,
+        delete_conversation
+    )
+    CHAT_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Chat components not available: {e}. Chat endpoints will be disabled.")
+    CHAT_AVAILABLE = False
 
 # Global shutdown event
 shutdown_event = asyncio.Event()
@@ -80,6 +102,18 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to start Prometheus metrics server: {e}")
 
+    # Initialize chat components
+    if CHAT_AVAILABLE and app.state.db_pool:
+        try:
+            await create_chat_tables(app.state.db_pool)
+            app.state.session_manager = ChatSessionManager(app.state.db_pool)
+            logger.info("Chat components initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize chat components: {e}")
+            app.state.session_manager = None
+    else:
+        app.state.session_manager = None
+
     logger.info("Application startup complete. Ready to serve requests.")
 
     yield
@@ -122,6 +156,8 @@ app = FastAPI(
 # Metrics
 SEARCH_REQUESTS = Counter('search_requests_total', 'Total search requests')
 SEARCH_LATENCY = Histogram('search_latency_seconds', 'Search latency in seconds')
+CHAT_REQUESTS = Counter('chat_requests_total', 'Total chat requests')
+CHAT_LATENCY = Histogram('chat_latency_seconds', 'Chat latency in seconds')
 
 class SearchRequest(BaseModel):
     query: str
@@ -285,6 +321,159 @@ async def readiness():
 def metrics():
     from prometheus_client import generate_latest
     return Response(generate_latest(), media_type="text/plain")
+
+
+# ==================== CHAT ENDPOINTS ====================
+
+@app.post("/chat/sessions", response_model=SessionCreateResponse if CHAT_AVAILABLE else None)
+async def create_chat_session():
+    """
+    Create a new chat session.
+
+    Returns session_id and conversation_id for subsequent chat interactions.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        session_id = str(uuid4())
+        conversation = await create_conversation(app.state.db_pool, session_id)
+
+        logger.info(f"Created chat session: {session_id}")
+
+        return SessionCreateResponse(
+            session_id=session_id,
+            conversation_id=conversation.id,
+            created_at=conversation.created_at
+        )
+    except Exception as e:
+        logger.error(f"Failed to create chat session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat/sessions/{session_id}/messages", response_model=ChatResponse if CHAT_AVAILABLE else None)
+@CHAT_LATENCY.time()
+async def send_chat_message(session_id: str, request: ChatRequest):
+    """
+    Send a message to an existing chat session.
+
+    The chatbot will process the message, potentially perform searches,
+    and return a conversational response.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.session_manager:
+        raise HTTPException(status_code=503, detail="Chat session manager not available")
+
+    CHAT_REQUESTS.inc()
+    start = time.time()
+
+    try:
+        # Get or create conversation for session
+        conversation = await get_conversation_by_session(app.state.db_pool, session_id)
+        if not conversation:
+            # Auto-create conversation for new session
+            conversation = await create_conversation(app.state.db_pool, session_id)
+
+        # Process message with ChatAgent
+        agent = ChatAgent(app.state.session_manager, session_id)
+        response_text, search_performed, search_results = await agent.process_message(
+            request.message,
+            conversation.id
+        )
+
+        # Create message object for response
+        assistant_msg = Message(
+            conversation_id=conversation.id,
+            role=MessageRole.ASSISTANT,
+            content=response_text,
+            search_results=search_results
+        )
+
+        logger.info(
+            f"Chat message processed: session={session_id}, "
+            f"search_performed={search_performed}, "
+            f"results_count={len(search_results) if search_results else 0}"
+        )
+
+        return ChatResponse(
+            conversation_id=conversation.id,
+            message=assistant_msg,
+            search_performed=search_performed,
+            search_results=search_results if request.include_search_results else None
+        )
+
+    except Exception as e:
+        logger.error(f"Chat error for session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        logger.info(f"Chat latency: {time.time() - start:.3f}s")
+
+
+@app.get("/chat/sessions/{session_id}", response_model=ConversationHistoryResponse if CHAT_AVAILABLE else None)
+async def get_chat_history(session_id: str):
+    """
+    Get conversation history for a chat session.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        conversation = await get_conversation_by_session(app.state.db_pool, session_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        return ConversationHistoryResponse(
+            conversation=conversation,
+            message_count=len(conversation.messages)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get chat history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/chat/sessions/{session_id}")
+async def delete_chat_session(session_id: str):
+    """
+    Delete a chat session and all its messages.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        conversation = await get_conversation_by_session(app.state.db_pool, session_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        deleted = await delete_conversation(app.state.db_pool, conversation.id)
+        if deleted:
+            # Clean up in-memory session
+            if app.state.session_manager:
+                await app.state.session_manager.cleanup_session(session_id)
+
+            logger.info(f"Deleted chat session: {session_id}")
+            return {"status": "deleted", "session_id": session_id}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete session")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete chat session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
