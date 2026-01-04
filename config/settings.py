@@ -18,6 +18,8 @@ class Settings:
 
     # Chat settings
     chat_summarization_threshold: int = int(os.getenv("CHAT_SUMMARIZATION_THRESHOLD", "10"))
+    chat_max_iterations: int = int(os.getenv("CHAT_MAX_ITERATIONS", "5"))
+    chat_max_retries: int = int(os.getenv("CHAT_MAX_RETRIES", "3"))
     chat_summary_max_tokens: int = int(os.getenv("CHAT_SUMMARY_MAX_TOKENS", "500"))
     chat_max_iterations: int = int(os.getenv("CHAT_MAX_ITERATIONS", "5"))
     chat_max_retries: int = int(os.getenv("CHAT_MAX_RETRIES", "3"))

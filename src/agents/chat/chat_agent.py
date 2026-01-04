@@ -30,10 +30,29 @@ except ImportError:
 
 # Try to import OpenAI for fallback
 try:
-    from openai import OpenAI
+    from openai import OpenAI, APIError, RateLimitError, AuthenticationError
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+    APIError = RateLimitError = AuthenticationError = Exception
+
+
+# Custom exceptions for better error categorization
+class DatabaseError(Exception):
+    """Raised when database operations fail."""
+    pass
+
+class LLMAPIError(Exception):
+    """Raised when LLM API calls fail."""
+    pass
+
+class SearchPipelineError(Exception):
+    """Raised when search operations fail."""
+    pass
+
+class MemoryError(Exception):
+    """Raised when memory operations fail."""
+    pass
 
 
 CHAT_SYSTEM_PROMPT = """You are a helpful restaurant search assistant for a culinary search engine.
@@ -139,9 +158,13 @@ class ChatAgent:
             await self.session_manager.add_user_message(
                 self.session_id,
                 user_message,
-                str(conversation_id) if conversation_id else None
+                conversation_id
             )
+        except Exception as e:
+            logger.error(f"Memory error adding user message: {e}")
+            raise MemoryError(f"Failed to store user message: {str(e)}")
 
+        try:
             # Process based on available framework
             if BEEAI_REACT_AVAILABLE and self.llm:
                 response_text, search_performed, search_results = await self._process_with_react(
@@ -151,20 +174,29 @@ class ChatAgent:
                 response_text, search_performed, search_results = await self._process_with_fallback(
                     user_message
                 )
+        except LLMAPIError as e:
+            logger.error(f"LLM API error during processing: {e}")
+            return await self._error_response("I'm having trouble connecting to my language model. Please try again in a moment.")
+        except SearchPipelineError as e:
+            logger.error(f"Search pipeline error: {e}")
+            return await self._error_response("I'm having trouble with the search system. Please try a different search query.")
+        except Exception as e:
+            logger.error(f"Unexpected error during message processing: {e}")
+            return await self._error_response("I encountered an unexpected error. Please try again.")
 
+        try:
             # Add assistant response to memory
             await self.session_manager.add_assistant_message(
                 self.session_id,
                 response_text,
-                str(conversation_id) if conversation_id else None,
+                conversation_id,
                 search_results
             )
-
-            return response_text, search_performed, search_results
-
         except Exception as e:
-            logger.error(f"ChatAgent error: {e}")
-            return await self._error_response(str(e))
+            logger.warning(f"Failed to store assistant response in memory: {e}")
+            # Don't fail the response if memory storage fails
+
+        return response_text, search_performed, search_results
 
     async def _process_with_react(
         self,
@@ -182,10 +214,18 @@ class ChatAgent:
         try:
             # Get session memory
             memory = await self.session_manager.get_or_create_memory(self.session_id)
+        except Exception as e:
+            logger.error(f"Memory error in ReAct processing: {e}")
+            raise MemoryError(f"Failed to access session memory: {str(e)}")
 
+        try:
             # Create tools with session context
             tools = self._create_tools()
+        except Exception as e:
+            logger.error(f"Tool creation error: {e}")
+            raise SearchPipelineError(f"Failed to initialize search tools: {str(e)}")
 
+        try:
             # Create ReActAgent
             agent = ReActAgent(
                 llm=self.llm,
@@ -193,7 +233,11 @@ class ChatAgent:
                 memory=memory,
                 instructions=CHAT_SYSTEM_PROMPT
             )
+        except Exception as e:
+            logger.error(f"ReActAgent creation failed: {e}")
+            raise LLMAPIError(f"Failed to initialize AI agent: {str(e)}")
 
+        try:
             # Run agent
             result = await agent.run(
                 user_message,
@@ -202,17 +246,19 @@ class ChatAgent:
                     total_max_retries=settings.chat_max_retries
                 )
             )
+        except Exception as e:
+            logger.error(f"ReActAgent execution failed: {e}")
+            raise LLMAPIError(f"AI agent execution failed: {str(e)}")
 
+        try:
             response_text = result.result.text if hasattr(result, 'result') else str(result)
             search_performed = self._check_search_performed(result)
             search_results = get_last_search_results(self.session_id) if search_performed else None
 
             return response_text, search_performed, search_results
-
         except Exception as e:
-            logger.error(f"ReActAgent failed: {e}")
-            # Fall back to simple processing
-            return await self._process_with_fallback(user_message)
+            logger.error(f"Result processing failed: {e}")
+            raise SearchPipelineError(f"Failed to process agent results: {str(e)}")
 
     def _create_tools(self) -> List[Any]:
         """Create BeeAI tools with session context."""
@@ -278,18 +324,30 @@ class ChatAgent:
         try:
             # Get conversation context
             context = await self.session_manager.get_context(self.session_id)
+        except Exception as e:
+            logger.error(f"Memory error getting context: {e}")
+            context = ""  # Continue with empty context
 
+        try:
             # Detect intent
             intent = await self._detect_intent(user_message, context)
+        except Exception as e:
+            logger.error(f"Intent detection failed: {e}")
+            intent = "search"  # Default to search
 
-            if intent == "search":
+        if intent == "search":
+            try:
                 # Perform search
                 search_results_text = await search_menu_items_impl(
                     query=user_message,
                     session_id=self.session_id
                 )
                 search_results = get_last_search_results(self.session_id)
+            except Exception as e:
+                logger.error(f"Search pipeline failed: {e}")
+                raise SearchPipelineError(f"Search operation failed: {str(e)}")
 
+            try:
                 # Generate response with results
                 response = await self._generate_response_with_results(
                     user_message,
@@ -297,8 +355,14 @@ class ChatAgent:
                     context
                 )
                 return response, True, search_results
+            except LLMAPIError:
+                raise  # Re-raise LLM errors
+            except Exception as e:
+                logger.error(f"Response generation failed: {e}")
+                return search_results_text, True, search_results  # Return raw results
 
-            elif intent == "followup":
+        elif intent == "followup":
+            try:
                 # Check for result number in message
                 result_num = self._extract_result_number(user_message)
                 if result_num:
@@ -313,15 +377,20 @@ class ChatAgent:
                         context
                     )
                     return response, False, search_results
+            except Exception as e:
+                logger.error(f"Follow-up processing failed: {e}")
+                return "I can help you with more details about any of the results. Just let me know which one interests you!", False, None
 
-            else:
+        else:
+            try:
                 # General conversation
                 response = await self._generate_general_response(user_message, context)
                 return response, False, None
-
-        except Exception as e:
-            logger.error(f"Fallback processing failed: {e}")
-            return await self._simple_search_response(user_message)
+            except LLMAPIError:
+                raise  # Re-raise LLM errors
+            except Exception as e:
+                logger.error(f"General response generation failed: {e}")
+                return "Hello! How can I help you find something to eat today?", False, None
 
     async def _detect_intent(self, message: str, context: str) -> str:
         """Detect user intent from message."""
@@ -409,8 +478,17 @@ Generate a brief, friendly response that summarizes the results and offers to pr
             )
             return response.choices[0].message.content
 
+        except AuthenticationError as e:
+            logger.error(f"LLM API authentication failed: {e}")
+            raise LLMAPIError("API authentication failed. Please check API keys.")
+        except RateLimitError as e:
+            logger.error(f"LLM API rate limit exceeded: {e}")
+            raise LLMAPIError("API rate limit exceeded. Please try again later.")
+        except APIError as e:
+            logger.error(f"LLM API error: {e}")
+            raise LLMAPIError(f"Language model service error: {str(e)}")
         except Exception as e:
-            logger.error(f"Failed to generate response: {e}")
+            logger.error(f"Unexpected error generating response: {e}")
             return results_text
 
     async def _generate_followup_response(
@@ -449,8 +527,17 @@ Provide a helpful response addressing their question about the results."""
             )
             return response.choices[0].message.content
 
+        except AuthenticationError as e:
+            logger.error(f"LLM API authentication failed in followup: {e}")
+            raise LLMAPIError("API authentication failed. Please check API keys.")
+        except RateLimitError as e:
+            logger.error(f"LLM API rate limit exceeded in followup: {e}")
+            raise LLMAPIError("API rate limit exceeded. Please try again later.")
+        except APIError as e:
+            logger.error(f"LLM API error in followup: {e}")
+            raise LLMAPIError(f"Language model service error: {str(e)}")
         except Exception as e:
-            logger.error(f"Failed to generate followup response: {e}")
+            logger.error(f"Unexpected error in followup response: {e}")
             return "I can help you with more details about any of the results. Just let me know which one interests you!"
 
     async def _generate_general_response(self, message: str, context: str) -> str:
@@ -477,8 +564,17 @@ Respond naturally and offer to help with restaurant/food searches if appropriate
             )
             return response.choices[0].message.content
 
+        except AuthenticationError as e:
+            logger.error(f"LLM API authentication failed in general response: {e}")
+            raise LLMAPIError("API authentication failed. Please check API keys.")
+        except RateLimitError as e:
+            logger.error(f"LLM API rate limit exceeded in general response: {e}")
+            raise LLMAPIError("API rate limit exceeded. Please try again later.")
+        except APIError as e:
+            logger.error(f"LLM API error in general response: {e}")
+            raise LLMAPIError(f"Language model service error: {str(e)}")
         except Exception as e:
-            logger.error(f"Failed to generate general response: {e}")
+            logger.error(f"Unexpected error in general response: {e}")
             return "Hello! How can I help you find something to eat today?"
 
     async def _simple_search_response(
@@ -503,7 +599,7 @@ Respond naturally and offer to help with restaurant/food searches if appropriate
             return results_text, True, search_results
         except Exception as e:
             logger.error(f"Simple search failed: {e}")
-            return f"I encountered an error while searching. Please try again.", False, None
+            raise SearchPipelineError(f"Search operation failed: {str(e)}")
 
     async def _error_response(
         self,

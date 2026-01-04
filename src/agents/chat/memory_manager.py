@@ -6,6 +6,7 @@ for persistence across server restarts.
 """
 from typing import Dict, List, Optional, Any
 import asyncpg
+from uuid import UUID
 from loguru import logger
 
 from config.settings import settings
@@ -131,7 +132,7 @@ class ChatSessionManager:
         self,
         session_id: str,
         content: str,
-        conversation_id: Optional[str] = None
+        conversation_id: Optional[UUID] = None
     ) -> None:
         """
         Add a user message to session memory and persist to DB.
@@ -156,7 +157,7 @@ class ChatSessionManager:
         self,
         session_id: str,
         content: str,
-        conversation_id: Optional[str] = None,
+        conversation_id: Optional[UUID] = None,
         search_results: Optional[List[dict]] = None
     ) -> None:
         """
@@ -267,7 +268,7 @@ class ChatSessionManager:
 
     async def _persist_message(
         self,
-        conversation_id: str,
+        conversation_id: UUID,
         role: str,
         content: str,
         search_results: Optional[List[dict]] = None
