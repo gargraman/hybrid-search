@@ -1,20 +1,22 @@
-# AI-Powered Hybrid Culinary Search Engine POC
+# AI-Powered Hybrid Culinary Search Engine with Conversational Chat
 
-A production-ready proof-of-concept for an AI-powered hybrid search engine that combines semantic vector search with traditional keyword search for restaurant menu discovery. Built with a multi-agent architecture using BeeAI framework, offering natural language query understanding and intelligent result ranking.
+A production-ready AI-powered hybrid search engine that combines semantic vector search with traditional keyword search for restaurant menu discovery. Features both programmatic search APIs and an interactive conversational chat interface powered by multi-agent BeeAI framework.
 
 ## Key Features
 
 - **Hybrid Search with RRF Fusion**: Combines semantic (Qdrant vector search) + keyword (Whoosh BM25) using Reciprocal Rank Fusion algorithm (k=60)
+- **Conversational Chat Interface**: Interactive chatbot with session management, conversation persistence, and natural language search
 - **Multi-Agent Orchestration** (BeeAI Framework v0.1.70):
   - **QueryParserAgent**: LLM-powered query parsing extracting keywords, price, dietary, and location filters
   - **SearchAgent**: Semantic search with LLM context from restaurant data
   - **QualityAgent**: LLM-based result validation for relevance and safety
   - **VerificationAgent**: Business rule compliance checking
   - **RankingAgent**: LLM-powered relevance scoring (0-10 scale)
-  - **Orchestrator**: Coordinates the full 6-stage pipeline
+  - **ChatAgent**: Conversational interface with ReActAgent reasoning and tool use
 - **Production-Grade Embeddings**: `sentence-transformers` with `all-MiniLM-L6-v2` model (384-dimensional vectors)
 - **Scalable Database Architecture**: Qdrant for vector search + PostgreSQL for metadata with efficient join pattern
 - **Location-Aware Search**: Filter by city/state in natural language queries
+- **Session-Based Chat**: Persistent conversations with PostgreSQL-backed memory management
 - **Comprehensive Monitoring**: Prometheus metrics, health/liveness/readiness endpoints, structured logging
 - **Graceful Degradation**: Automatic fallback to basic hybrid search when LLM agents unavailable
 - **RESTful API**: FastAPI with async endpoints, OpenAPI docs, CORS support
@@ -61,6 +63,15 @@ python src/main.py
 curl -X POST "http://localhost:8000/search" \
   -H "Content-Type: application/json" \
   -d '{"query": "vegan tacos under 15", "top_k": 10}'
+
+# 9. Test the chat system (create session and send message)
+curl -X POST "http://localhost:8000/chat/sessions" \
+  -H "Content-Type: application/json"
+
+# Use the returned session_id to send a chat message
+curl -X POST "http://localhost:8000/chat/sessions/YOUR_SESSION_ID/messages" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Find me some vegan restaurants in San Francisco", "include_search_results": true}'
 ```
 
 ## Detailed Setup Instructions
@@ -163,7 +174,8 @@ python src/main.py
 ```
 
 Server starts on `http://localhost:8000` with:
-- API endpoints at `/search`
+- Search API at `/search`
+- Chat API at `/chat/sessions`
 - OpenAPI docs at `/docs`
 - Health checks at `/health`, `/health/live`, `/health/ready`
 - Prometheus metrics at `/metrics` and port `8001`
@@ -196,6 +208,22 @@ curl -X POST "http://localhost:8000/search" \
   }'
 ```
 
+**Test chat system:**
+```bash
+# Create a chat session
+SESSION_RESPONSE=$(curl -X POST "http://localhost:8000/chat/sessions" \
+  -H "Content-Type: application/json")
+SESSION_ID=$(echo $SESSION_RESPONSE | jq -r '.session_id')
+
+# Send a chat message
+curl -X POST "http://localhost:8000/chat/sessions/$SESSION_ID/messages" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Find vegan food in San Francisco",
+    "include_search_results": true
+  }'
+```
+
 **View API documentation:**
 Open `http://localhost:8000/docs` in your browser
 
@@ -207,7 +235,9 @@ curl http://localhost:8000/metrics
 
 ## API Endpoints
 
-### POST /search
+### Search API
+
+#### POST /search
 Search for menu items using natural language queries.
 
 **Request Body:**
@@ -235,7 +265,7 @@ Search for menu items using natural language queries.
       "state": "CA",
       "cuisine": "mexican"
     },
-    "relevance_score": 9.2
+    "relevance_score": 8.9
   }
 ]
 ```
@@ -246,7 +276,86 @@ Search for menu items using natural language queries.
 - Location: "pizza in San Francisco", "sushi in New York"
 - Combined: "vegan tacos in SF under 15"
 
-### GET /health
+### Chat API
+
+#### POST /chat/sessions
+Create a new chat session for conversational search.
+
+**Response:**
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440001",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+#### POST /chat/sessions/{session_id}/messages
+Send a message in an existing chat session.
+
+**Request Body:**
+```json
+{
+  "message": "Find me some vegan restaurants in San Francisco",
+  "include_search_results": true
+}
+```
+
+**Response:**
+```json
+{
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440001",
+  "message": "I found several great vegan options in San Francisco! Here are the top results...",
+  "search_performed": true,
+  "search_results": [
+    {
+      "id": "GreenEats_Appetizers_VeganBurger",
+      "score": 0.92,
+      "metadata": {
+        "name": "Vegan Burger",
+        "restaurant": "Green Eats",
+        "price": 14.99,
+        "city": "San Francisco"
+      }
+    }
+  ]
+}
+```
+
+#### GET /chat/sessions/{session_id}
+Get conversation history for a chat session.
+
+**Response:**
+```json
+{
+  "conversation": {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "messages": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440002",
+        "role": "user",
+        "content": "Find vegan food",
+        "created_at": "2024-01-15T10:30:00Z"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440003",
+        "role": "assistant",
+        "content": "I found several vegan options...",
+        "created_at": "2024-01-15T10:30:05Z"
+      }
+    ]
+  },
+  "message_count": 2
+}
+```
+
+#### DELETE /chat/sessions/{session_id}
+Delete a chat session and all its messages.
+
+### Health & Monitoring
+
+#### GET /health
 Comprehensive health check with component status.
 
 **Response:**
@@ -260,18 +369,20 @@ Comprehensive health check with component status.
 }
 ```
 
-### GET /health/live
+#### GET /health/live
 Liveness probe for Kubernetes (checks if application is running).
 
-### GET /health/ready
+#### GET /health/ready
 Readiness probe for Kubernetes (checks if application is ready to serve traffic).
 
-### GET /metrics
+#### GET /metrics
 Prometheus metrics endpoint.
 
 **Metrics exposed:**
 - `search_requests_total`: Total number of search requests
+- `chat_requests_total`: Total number of chat requests
 - `search_latency_seconds`: Histogram of search latency
+- `chat_latency_seconds`: Histogram of chat response latency
 
 ### GET /docs
 Interactive OpenAPI (Swagger) documentation.
@@ -328,6 +439,29 @@ Interactive OpenAPI (Swagger) documentation.
    - Sorts by relevance score descending
    - Returns final ranked results
 
+### Conversational Chat System
+
+The chat system provides interactive, session-based conversations with persistent memory:
+
+1. **Session Management** (`main.py:/chat/sessions`):
+   - Creates unique session IDs for conversation threads
+   - Manages conversation lifecycle and cleanup
+
+2. **Chat Agent** (ChatAgent using BeeAI ReActAgent):
+   - Powered by ReActAgent for reasoning and tool use
+   - Integrates with search tools for restaurant discovery
+   - Maintains conversation context and history
+
+3. **Memory Management** (MemoryManager):
+   - PostgreSQL-backed conversation persistence
+   - Stores messages with timestamps and metadata
+   - Enables conversation history retrieval and continuation
+
+4. **Search Integration** (Chat Tools):
+   - Direct access to hybrid search pipeline
+   - Tool-based search execution within conversations
+   - Seamless integration of search results into chat responses
+
 ### Hybrid Search (Fallback Mode)
 
 When agents are unavailable, the system uses RRF-based hybrid search:
@@ -353,6 +487,22 @@ When agents are unavailable, the system uses RRF-based hybrid search:
 - `restaurant_id`: Foreign key to restaurants
 - `external_id`: Unique identifier for Qdrant join (e.g., "RestaurantName_Category_ItemName")
 - `category`, `name`, `description`, `price`: Menu item fields
+
+**conversations** table (for chat sessions):
+- `id`: Primary key (UUID)
+- `session_id`: Unique session identifier (string)
+- `title`: Optional conversation title
+- `summary`: Optional conversation summary
+- `created_at`: Timestamp
+- `updated_at`: Timestamp
+
+**messages** table (for chat messages):
+- `id`: Primary key (UUID)
+- `conversation_id`: Foreign key to conversations
+- `role`: Message role (user/assistant/system)
+- `content`: Message text content
+- `search_results`: Optional JSON array of search results
+- `created_at`: Timestamp
 
 **Qdrant collection** (`menu_items`):
 - 384-dimensional vectors (cosine similarity)
@@ -616,17 +766,22 @@ spec:
 hybrid-search/
 ├── src/
 │   ├── agents/              # Multi-agent system
-│   │   ├── orchestrator.py  # Agent coordinator
-│   │   ├── query_parser.py  # Query parsing agent
-│   │   ├── search_agent.py  # Search agent
-│   │   ├── ranking_agent.py # Ranking agent
-│   │   ├── quality_agent.py # Quality validation agent
-│   │   └── verification_agent.py # Verification agent
+│   │   ├── chat/            # Conversational chat agents
+│   │   │   ├── chat_agent.py    # BeeAI ReActAgent for chat
+│   │   │   ├── memory_manager.py # PostgreSQL-backed conversation persistence
+│   │   │   └── tools.py         # Search tools for chat agents
+│   │   ├── orchestrator.py      # Agent coordinator for search pipeline
+│   │   ├── query_parser.py      # Query parsing agent
+│   │   ├── search_agent.py      # Semantic search agent
+│   │   ├── ranking_agent.py     # Relevance ranking agent
+│   │   ├── quality_agent.py     # Quality validation agent
+│   │   └── verification_agent.py # Business rule verification agent
 │   ├── db/                  # Database clients
 │   │   ├── qdrant.py        # Qdrant client and operations
 │   │   └── postgres.py      # PostgreSQL operations
 │   ├── models/              # Data models
-│   │   └── restaurant.py    # Pydantic models
+│   │   ├── conversation.py  # Chat conversation models
+│   │   └── restaurant.py    # Restaurant and menu item models
 │   ├── search/              # Search implementations
 │   │   ├── hybrid_search.py # RRF hybrid search
 │   │   └── qdrant_postgres_search.py # Semantic search
@@ -634,19 +789,31 @@ hybrid-search/
 │   │   └── chunking.py      # Text chunking
 │   ├── ingest.py            # Whoosh ingestion
 │   ├── ingest_qdrant_postgres.py # Vector ingestion
-│   └── main.py              # FastAPI application
+│   └── main.py              # FastAPI application (search + chat APIs)
 ├── config/
 │   ├── settings.py          # Environment configuration
 │   └── db_config.py         # Database configuration
 ├── scripts/
 │   └── generate_seed_data.py # Test data generation
 ├── input/
-│   └── seed/                # Generated seed data
-├── tests/                   # Test directory (empty)
+│   ├── restaurant1.json     # Sample restaurant data
+│   └── seed/                # Generated seed data (200 restaurants)
+├── tests/                   # Test directory
+│   ├── conftest.py          # Test configuration
+│   ├── test_search.py       # Search tests (framework ready)
+│   └── __init__.py
 ├── docs/
+│   ├── AI-Powered HybridSearch-1.txt
 │   └── geo_metadata.md      # Geo integration docs
+├── whoosh_index/            # Whoosh keyword search index
 ├── requirements.txt         # Python dependencies
+├── requirements_replit.txt  # Replit-specific dependencies
+├── pytest.ini               # Test configuration
+├── docker-compose.yml       # Database services
+├── Dockerfile               # Application container
 ├── CLAUDE.md                # Claude Code guidance
+├── TESTING.md               # Testing documentation
+├── replit.md                # Replit deployment guide
 └── README.md                # This file
 ```
 

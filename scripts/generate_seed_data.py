@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Any
 from datetime import datetime, timedelta
 
-SEED_COUNT = 200
+SEED_COUNT = 500
 OUTPUT_DIR = Path("input/seed")
 
 CITIES = [
