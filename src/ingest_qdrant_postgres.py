@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 from typing import Optional
 import asyncpg
+import uuid
 
 from sentence_transformers import SentenceTransformer
 
@@ -157,10 +158,14 @@ async def ingest():
                     embedding = get_embedding(text_blob)
 
                     # Prepare Qdrant point with rich payload
+                    # Generate deterministic UUID from external_id for Qdrant
+                    point_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, external_id))
+
                     points.append({
-                        "id": external_id,
+                        "id": point_uuid,
                         "vector": embedding,
                         "payload": {
+                            "external_id": external_id,  # Store original external_id in payload
                             "restaurant_id": rest_id,
                             "restaurant_name": rest.name,
                             "restaurant_type": rest.type or "",

@@ -82,7 +82,9 @@ async def search_menu_items(
         query_vector=query_vector,
         limit=top_k
     )
-    external_ids = [str(point.id) for point in results]
+
+    # Extract external_ids from payload (not from point.id which is now UUID)
+    external_ids = [point.payload.get("external_id", str(point.id)) for point in results]
 
     if not external_ids:
         return []
@@ -160,9 +162,10 @@ async def search_menu_items(
     # Merge Qdrant results with PostgreSQL metadata
     merged = []
     for point in results:
-        key = str(point.id)
-        row = rows_by_id.get(key)
         payload = point.payload or {}
+        # Use external_id from payload to look up PostgreSQL row
+        key = payload.get("external_id", str(point.id))
+        row = rows_by_id.get(key)
 
         # Skip if no data from either source
         if not row and not payload:
