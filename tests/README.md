@@ -1,6 +1,11 @@
 # Hybrid Search Test Suite
 
-Comprehensive test suite for the hybrid-search project covering lexical search (Whoosh), semantic search (Qdrant + PostgreSQL), and hybrid search functionality.
+Comprehensive test suite for the hybrid-search project covering all major components:
+- Database operations (PostgreSQL)
+- Search functionality (Whoosh + Qdrant + PostgreSQL)
+- API endpoints (FastAPI)
+- Agent system (Multi-agent orchestration)
+- Configuration management
 
 ## Test Structure
 
@@ -8,7 +13,11 @@ Comprehensive test suite for the hybrid-search project covering lexical search (
 tests/
 ├── __init__.py           # Test package initialization
 ├── conftest.py           # Shared fixtures and pytest configuration
-├── test_search.py        # Main search functionality tests
+├── test_database.py      # Database operations tests
+├── test_search.py        # Search functionality tests
+├── test_api.py           # API endpoint tests
+├── test_agents.py        # Agent system tests
+├── test_config.py        # Configuration tests
 └── README.md            # This file
 ```
 
@@ -216,6 +225,50 @@ curl http://localhost:6333/collections
 psql postgresql://user:password@localhost:5432/restaurantdb -c "SELECT COUNT(*) FROM restaurants;"
 ```
 
+## Additional Test Modules
+
+### Database Operations Tests (`test_database.py`)
+
+Tests for PostgreSQL database operations with connection pool management:
+- Table creation with pool
+- Restaurant insertion with proper ID handling
+- Menu item insertion with ON CONFLICT handling
+- Connection pool lifecycle management
+- Async context manager usage
+
+Run: `pytest tests/test_database.py -v`
+
+### API Endpoint Tests (`test_api.py`)
+
+Tests for FastAPI endpoints:
+- `/search` endpoint validation and filtering
+- Health check endpoints (`/health`, `/health/live`, `/health/ready`)
+- Request validation and error handling
+- Metrics endpoint availability
+- Performance characteristics
+
+Run: `pytest tests/test_api.py -v`
+
+### Agent Tests (`test_agents.py`)
+
+Tests for multi-agent orchestration system:
+- Orchestrator initialization with pool/client
+- SearchAgent filtering logic
+- API key handling and fallback
+- Edge cases (missing keys, no results)
+
+Run: `pytest tests/test_agents.py -v`
+
+### Configuration Tests (`test_config.py`)
+
+Tests for configuration management:
+- Settings loading from environment variables
+- Pydantic validation (DSN format, port ranges)
+- SecretStr usage for API keys
+- Default values and edge cases
+
+Run: `pytest tests/test_config.py -v`
+
 ## Test Markers Reference
 
 | Marker | Description |
@@ -226,6 +279,11 @@ psql postgresql://user:password@localhost:5432/restaurantdb -c "SELECT COUNT(*) 
 | `qdrant` | Tests requiring Qdrant vector database |
 | `postgres` | Tests requiring PostgreSQL database |
 | `slow` | Tests that take significant time to run |
+| `api` | Tests for API endpoints |
+| `database` | Tests for database operations |
+| `search` | Tests for search functionality |
+| `agents` | Tests for agent functionality |
+| `config` | Tests for configuration |
 
 ## Continuous Integration
 

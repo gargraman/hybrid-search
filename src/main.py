@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Response, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from contextlib import asynccontextmanager
 from prometheus_client import Counter, Histogram, start_http_server
@@ -10,6 +10,7 @@ import signal
 import asyncio
 import asyncpg
 from qdrant_client import QdrantClient
+import urllib.parse
 from config.db_config import POSTGRES_DSN, QDRANT_HOST, QDRANT_PORT, QDRANT_API_KEY
 
 # Try to import orchestrator, but fall back to simple search if unavailable
@@ -17,8 +18,12 @@ try:
     from src.agents.orchestrator import Orchestrator
     USE_ORCHESTRATOR = True
     hybrid_search_func = None
-except Exception as e:
-    logger.warning(f"Orchestrator not available: {e}. Using simple hybrid search.")
+except (ImportError, ModuleNotFoundError) as e:
+    logger.warning(f"Orchestrator module not found: {e}. Using simple hybrid search.")
+    USE_ORCHESTRATOR = False
+    from src.search.hybrid_search import hybrid_search as hybrid_search_func
+except (ValueError, RuntimeError) as e:
+    logger.warning(f"Orchestrator initialization failed: {e}. Using simple hybrid search.")
     USE_ORCHESTRATOR = False
     from src.search.hybrid_search import hybrid_search as hybrid_search_func
 
@@ -46,6 +51,29 @@ except Exception as e:
 # Global shutdown event
 shutdown_event = asyncio.Event()
 
+
+def mask_dsn(dsn: str) -> str:
+    """
+    Mask sensitive information in database DSN for logging.
+
+    Args:
+        dsn: Database connection string
+
+    Returns:
+        Masked DSN with credentials hidden
+    """
+    try:
+        parsed = urllib.parse.urlparse(dsn)
+        if parsed.password:
+            masked = parsed._replace(
+                netloc=f"{parsed.username}:***@{parsed.hostname}:{parsed.port}"
+            )
+            return masked.geturl()
+        return dsn
+    except Exception:
+        return "***masked***"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -66,7 +94,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize PostgreSQL connection pool
     try:
-        logger.info(f"Connecting to PostgreSQL: {POSTGRES_DSN.split('@')[1] if '@' in POSTGRES_DSN else POSTGRES_DSN}")
+        logger.info(f"Connecting to PostgreSQL: {mask_dsn(POSTGRES_DSN)}")
         app.state.db_pool = await asyncpg.create_pool(
             POSTGRES_DSN,
             min_size=2,
@@ -75,7 +103,7 @@ async def lifespan(app: FastAPI):
             command_timeout=60
         )
         logger.info("PostgreSQL connection pool initialized successfully")
-    except Exception as e:
+    except (asyncpg.PostgresError, OSError) as e:
         logger.error(f"Failed to initialize PostgreSQL connection pool: {e}")
         app.state.db_pool = None
 
@@ -160,8 +188,15 @@ CHAT_REQUESTS = Counter('chat_requests_total', 'Total chat requests')
 CHAT_LATENCY = Histogram('chat_latency_seconds', 'Chat latency in seconds')
 
 class SearchRequest(BaseModel):
-    query: str
-    top_k: int = 10
+    query: str = Field(..., min_length=1, max_length=1000, description="Search query text")
+    top_k: int = Field(default=10, ge=1, le=100, description="Maximum results to return")
+
+    @field_validator('query')
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        """Strip whitespace from query."""
+        return v.strip()
+
 
 class SearchResult(BaseModel):
     id: str
@@ -172,16 +207,31 @@ class SearchResult(BaseModel):
 @app.post("/search", response_model=List[SearchResult])
 @SEARCH_LATENCY.time()
 async def search(request: SearchRequest):
+    """
+    Search for menu items using hybrid search (semantic + keyword).
+
+    Uses orchestrator with agent pipeline if available, otherwise falls back to simple hybrid search.
+    """
     SEARCH_REQUESTS.inc()
     start = time.time()
     try:
         if USE_ORCHESTRATOR:
-            orchestrator = Orchestrator()
+            # Pass pool and client to orchestrator
+            orchestrator = Orchestrator(
+                db_pool=app.state.db_pool,
+                qdrant_client=app.state.qdrant_client
+            )
             results = await orchestrator.run_search(request.query, request.top_k)
             logger.info(f"Search query: {request.query}, top_k: {request.top_k}, results: {len(results)}")
             return results
         else:
-            results = hybrid_search_func(request.query, request.top_k)
+            # Pass pool and client to hybrid search function
+            results = hybrid_search_func(
+                request.query,
+                request.top_k,
+                qdrant_client=app.state.qdrant_client,
+                db_pool=app.state.db_pool
+            )
             logger.info(f"Search query (simple): {request.query}, top_k: {request.top_k}, results: {len(results)}")
             # Return dict compatible with SearchResult schema for proper serialization
             return [
@@ -193,14 +243,19 @@ async def search(request: SearchRequest):
                 }
                 for r in results
             ]
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
         logger.error(f"Search error: {e}")
         # Fallback to simple search if orchestrator fails at runtime
         if hybrid_search_func is None:
             from src.search.hybrid_search import hybrid_search as fallback_search
         else:
             fallback_search = hybrid_search_func
-        results = fallback_search(request.query, request.top_k)
+        results = fallback_search(
+            request.query,
+            request.top_k,
+            qdrant_client=app.state.qdrant_client,
+            db_pool=app.state.db_pool
+        )
         return [
             {
                 "id": r['id'],
