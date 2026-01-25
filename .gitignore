@@ -1,6 +1,8 @@
 input/seed/restaurant_0*
 input/seed/restaurant_1*
-
+input/seed/restaurant_2*
+input/seed/restaurant_3*
+input/seed/restaurant_4*
 # Python
 __pycache__/
 *.py[cod]
@@ -50,7 +52,9 @@ env/
 *.db
 *.sqlite
 *.sqlite3
-
+whoosh_index/*
+postgres_data/
+qdrant_data/
 # Logs
 *.log
 

@@ -1,14 +1,16 @@
-from fastapi import FastAPI, Response
-from pydantic import BaseModel
-from typing import List
+from fastapi import FastAPI, Response, HTTPException
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional
 from contextlib import asynccontextmanager
 from prometheus_client import Counter, Histogram, start_http_server
 from loguru import logger
+from uuid import uuid4, UUID
 import time
 import signal
 import asyncio
 import asyncpg
 from qdrant_client import QdrantClient
+import urllib.parse
 from config.db_config import POSTGRES_DSN, QDRANT_HOST, QDRANT_PORT, QDRANT_API_KEY
 
 # Try to import orchestrator, but fall back to simple search if unavailable
@@ -16,13 +18,93 @@ try:
     from src.agents.orchestrator import Orchestrator
     USE_ORCHESTRATOR = True
     hybrid_search_func = None
-except Exception as e:
-    logger.warning(f"Orchestrator not available: {e}. Using simple hybrid search.")
+except (ImportError, ModuleNotFoundError) as e:
+    logger.warning(f"Orchestrator module not found: {e}. Using simple hybrid search.")
+    USE_ORCHESTRATOR = False
+    from src.search.hybrid_search import hybrid_search as hybrid_search_func
+except (ValueError, RuntimeError) as e:
+    logger.warning(f"Orchestrator initialization failed: {e}. Using simple hybrid search.")
     USE_ORCHESTRATOR = False
     from src.search.hybrid_search import hybrid_search as hybrid_search_func
 
+# Try to import chat components
+try:
+    from src.agents.chat.chat_agent import ChatAgent
+    from src.agents.chat.memory_manager import ChatSessionManager
+    from src.models.conversation import (
+        ChatRequest, ChatResponse, SessionCreateResponse,
+        ConversationHistoryResponse, Message, MessageRole
+    )
+    from src.db.conversations import (
+        create_tables as create_chat_tables,
+        create_conversation,
+        get_conversation_by_session,
+        add_message as db_add_message,
+        get_messages,
+        delete_conversation
+    )
+    CHAT_AVAILABLE = True
+except Exception as e:
+    logger.warning(f"Chat components not available: {e}. Chat endpoints will be disabled.")
+    CHAT_AVAILABLE = False
+    # Define placeholder models to prevent FastAPI schema generation errors
+    class ChatRequest(BaseModel):
+        message: str = ""
+        include_search_results: bool = False
+
+    class ChatResponse(BaseModel):
+        pass
+
+    class SessionCreateResponse(BaseModel):
+        pass
+
+    class ConversationHistoryResponse(BaseModel):
+        pass
+
+    # Placeholder functions
+    async def create_conversation(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def get_conversation_by_session(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def db_add_message(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def get_messages(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def delete_conversation(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    ChatAgent = None
+    ChatSessionManager = None
+
 # Global shutdown event
 shutdown_event = asyncio.Event()
+
+
+def mask_dsn(dsn: str) -> str:
+    """
+    Mask sensitive information in database DSN for logging.
+
+    Args:
+        dsn: Database connection string
+
+    Returns:
+        Masked DSN with credentials hidden
+    """
+    try:
+        parsed = urllib.parse.urlparse(dsn)
+        if parsed.password:
+            masked = parsed._replace(
+                netloc=f"{parsed.username}:***@{parsed.hostname}:{parsed.port}"
+            )
+            return masked.geturl()
+        return dsn
+    except Exception:
+        return "***masked***"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,7 +126,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize PostgreSQL connection pool
     try:
-        logger.info(f"Connecting to PostgreSQL: {POSTGRES_DSN.split('@')[1] if '@' in POSTGRES_DSN else POSTGRES_DSN}")
+        logger.info(f"Connecting to PostgreSQL: {mask_dsn(POSTGRES_DSN)}")
         app.state.db_pool = await asyncpg.create_pool(
             POSTGRES_DSN,
             min_size=2,
@@ -53,7 +135,7 @@ async def lifespan(app: FastAPI):
             command_timeout=60
         )
         logger.info("PostgreSQL connection pool initialized successfully")
-    except Exception as e:
+    except (asyncpg.PostgresError, OSError) as e:
         logger.error(f"Failed to initialize PostgreSQL connection pool: {e}")
         app.state.db_pool = None
 
@@ -79,6 +161,18 @@ async def lifespan(app: FastAPI):
         logger.info("Prometheus metrics server started on port 8001")
     except Exception as e:
         logger.warning(f"Failed to start Prometheus metrics server: {e}")
+
+    # Initialize chat components
+    if CHAT_AVAILABLE and app.state.db_pool:
+        try:
+            await create_chat_tables(app.state.db_pool)
+            app.state.session_manager = ChatSessionManager(app.state.db_pool)
+            logger.info("Chat components initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize chat components: {e}")
+            app.state.session_manager = None
+    else:
+        app.state.session_manager = None
 
     logger.info("Application startup complete. Ready to serve requests.")
 
@@ -122,10 +216,19 @@ app = FastAPI(
 # Metrics
 SEARCH_REQUESTS = Counter('search_requests_total', 'Total search requests')
 SEARCH_LATENCY = Histogram('search_latency_seconds', 'Search latency in seconds')
+CHAT_REQUESTS = Counter('chat_requests_total', 'Total chat requests')
+CHAT_LATENCY = Histogram('chat_latency_seconds', 'Chat latency in seconds')
 
 class SearchRequest(BaseModel):
-    query: str
-    top_k: int = 10
+    query: str = Field(..., min_length=1, max_length=1000, description="Search query text")
+    top_k: int = Field(default=10, ge=1, le=100, description="Maximum results to return")
+
+    @field_validator('query')
+    @classmethod
+    def validate_query(cls, v: str) -> str:
+        """Strip whitespace from query."""
+        return v.strip()
+
 
 class SearchResult(BaseModel):
     id: str
@@ -134,18 +237,32 @@ class SearchResult(BaseModel):
     relevance_score: float
 
 @app.post("/search", response_model=List[SearchResult])
-@SEARCH_LATENCY.time()
 async def search(request: SearchRequest):
+    """
+    Search for menu items using hybrid search (semantic + keyword).
+
+    Uses orchestrator with agent pipeline if available, otherwise falls back to simple hybrid search.
+    """
     SEARCH_REQUESTS.inc()
     start = time.time()
     try:
         if USE_ORCHESTRATOR:
-            orchestrator = Orchestrator()
+            # Pass pool and client to orchestrator
+            orchestrator = Orchestrator(
+                db_pool=app.state.db_pool,
+                qdrant_client=app.state.qdrant_client
+            )
             results = await orchestrator.run_search(request.query, request.top_k)
             logger.info(f"Search query: {request.query}, top_k: {request.top_k}, results: {len(results)}")
             return results
         else:
-            results = hybrid_search_func(request.query, request.top_k)
+            # Pass pool and client to hybrid search function
+            results = hybrid_search_func(
+                request.query,
+                request.top_k,
+                qdrant_client=app.state.qdrant_client,
+                db_pool=app.state.db_pool
+            )
             logger.info(f"Search query (simple): {request.query}, top_k: {request.top_k}, results: {len(results)}")
             # Return dict compatible with SearchResult schema for proper serialization
             return [
@@ -157,14 +274,20 @@ async def search(request: SearchRequest):
                 }
                 for r in results
             ]
-    except Exception as e:
-        logger.error(f"Search error: {e}")
+    except (ValueError, RuntimeError, Exception) as e:
+        # Catch all exceptions including OpenAI errors and fallback to simple search
+        logger.warning(f"Orchestrator search failed: {e}. Falling back to simple hybrid search.")
         # Fallback to simple search if orchestrator fails at runtime
         if hybrid_search_func is None:
             from src.search.hybrid_search import hybrid_search as fallback_search
         else:
             fallback_search = hybrid_search_func
-        results = fallback_search(request.query, request.top_k)
+        results = fallback_search(
+            request.query,
+            request.top_k,
+            qdrant_client=app.state.qdrant_client,
+            db_pool=app.state.db_pool
+        )
         return [
             {
                 "id": r['id'],
@@ -285,6 +408,159 @@ async def readiness():
 def metrics():
     from prometheus_client import generate_latest
     return Response(generate_latest(), media_type="text/plain")
+
+
+# ==================== CHAT ENDPOINTS ====================
+
+@app.post("/chat/sessions", response_model=SessionCreateResponse if CHAT_AVAILABLE else None)
+async def create_chat_session():
+    """
+    Create a new chat session.
+
+    Returns session_id and conversation_id for subsequent chat interactions.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        session_id = str(uuid4())
+        conversation = await create_conversation(app.state.db_pool, session_id)
+
+        logger.info(f"Created chat session: {session_id}")
+
+        return SessionCreateResponse(
+            session_id=session_id,
+            conversation_id=conversation.id,
+            created_at=conversation.created_at
+        )
+    except Exception as e:
+        logger.error(f"Failed to create chat session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat/sessions/{session_id}/messages", response_model=ChatResponse if CHAT_AVAILABLE else None)
+@CHAT_LATENCY.time()
+async def send_chat_message(session_id: str, request: ChatRequest):
+    """
+    Send a message to an existing chat session.
+
+    The chatbot will process the message, potentially perform searches,
+    and return a conversational response.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.session_manager:
+        raise HTTPException(status_code=503, detail="Chat session manager not available")
+
+    CHAT_REQUESTS.inc()
+    start = time.time()
+
+    try:
+        # Get or create conversation for session
+        conversation = await get_conversation_by_session(app.state.db_pool, session_id)
+        if not conversation:
+            # Auto-create conversation for new session
+            conversation = await create_conversation(app.state.db_pool, session_id)
+
+        # Process message with ChatAgent
+        agent = ChatAgent(app.state.session_manager, session_id)
+        response_text, search_performed, search_results = await agent.process_message(
+            request.message,
+            conversation.id
+        )
+
+        # Create message object for response
+        assistant_msg = Message(
+            conversation_id=conversation.id,
+            role=MessageRole.ASSISTANT,
+            content=response_text,
+            search_results=search_results
+        )
+
+        logger.info(
+            f"Chat message processed: session={session_id}, "
+            f"search_performed={search_performed}, "
+            f"results_count={len(search_results) if search_results else 0}"
+        )
+
+        return ChatResponse(
+            conversation_id=conversation.id,
+            message=assistant_msg,
+            search_performed=search_performed,
+            search_results=search_results if request.include_search_results else None
+        )
+
+    except Exception as e:
+        logger.error(f"Chat error for session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        logger.info(f"Chat latency: {time.time() - start:.3f}s")
+
+
+@app.get("/chat/sessions/{session_id}", response_model=ConversationHistoryResponse if CHAT_AVAILABLE else None)
+async def get_chat_history(session_id: str):
+    """
+    Get conversation history for a chat session.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        conversation = await get_conversation_by_session(app.state.db_pool, session_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        return ConversationHistoryResponse(
+            conversation=conversation,
+            message_count=len(conversation.messages)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get chat history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/chat/sessions/{session_id}")
+async def delete_chat_session(session_id: str):
+    """
+    Delete a chat session and all its messages.
+    """
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    if not app.state.db_pool:
+        raise HTTPException(status_code=503, detail="Database not available")
+
+    try:
+        conversation = await get_conversation_by_session(app.state.db_pool, session_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        deleted = await delete_conversation(app.state.db_pool, conversation.id)
+        if deleted:
+            # Clean up in-memory session
+            if app.state.session_manager:
+                await app.state.session_manager.cleanup_session(session_id)
+
+            logger.info(f"Deleted chat session: {session_id}")
+            return {"status": "deleted", "session_id": session_id}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete session")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete chat session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

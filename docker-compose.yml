@@ -4,6 +4,10 @@ networks:
   hybrid-search-network:
     driver: bridge
 
+volumes:
+  postgres_data:
+  qdrant_data:
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -36,8 +40,9 @@ services:
     restart: unless-stopped
 
   qdrant:
-    image: qdrant/qdrant:v1.13.0
+    image: qdrant/qdrant:v1.16.2-unprivileged
     container_name: hybrid-qdrant
+    user: "1000:2000"
     environment:
       QDRANT_API_KEY: "my_secret_api_key"
     ports:
@@ -103,9 +108,3 @@ services:
           cpus: '0.5'
           memory: 512M
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-    driver: local
-  qdrant_data:
-    driver: local

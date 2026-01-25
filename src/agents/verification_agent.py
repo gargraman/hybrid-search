@@ -1,10 +1,12 @@
-from beeai_framework import Agent
 from typing import List, Dict
 from openai import OpenAI
 from config.settings import settings
 
-class VerificationAgent(Agent):
+class VerificationAgent:
+    """Agent for checking search results for factual accuracy and compliance with business rules."""
+
     def __init__(self):
+        """Initialize the verification agent with LLM client."""
         if settings.deepseek_api_key:
             self.client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
             self.model = "deepseek-chat"
@@ -13,7 +15,6 @@ class VerificationAgent(Agent):
             self.model = "gpt-3.5-turbo"
         else:
             raise ValueError("No API key set for LLM")
-        super().__init__(instructions="Check search results for factual accuracy and compliance with business rules.")
 
     async def verify_results(self, results: List[Dict]) -> List[Dict]:
         verified = []
