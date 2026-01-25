@@ -47,6 +47,38 @@ try:
 except Exception as e:
     logger.warning(f"Chat components not available: {e}. Chat endpoints will be disabled.")
     CHAT_AVAILABLE = False
+    # Define placeholder models to prevent FastAPI schema generation errors
+    class ChatRequest(BaseModel):
+        message: str = ""
+        include_search_results: bool = False
+
+    class ChatResponse(BaseModel):
+        pass
+
+    class SessionCreateResponse(BaseModel):
+        pass
+
+    class ConversationHistoryResponse(BaseModel):
+        pass
+
+    # Placeholder functions
+    async def create_conversation(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def get_conversation_by_session(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def db_add_message(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def get_messages(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    async def delete_conversation(*args, **kwargs):
+        raise HTTPException(status_code=503, detail="Chat feature not available")
+
+    ChatAgent = None
+    ChatSessionManager = None
 
 # Global shutdown event
 shutdown_event = asyncio.Event()
@@ -205,7 +237,6 @@ class SearchResult(BaseModel):
     relevance_score: float
 
 @app.post("/search", response_model=List[SearchResult])
-@SEARCH_LATENCY.time()
 async def search(request: SearchRequest):
     """
     Search for menu items using hybrid search (semantic + keyword).
@@ -243,8 +274,9 @@ async def search(request: SearchRequest):
                 }
                 for r in results
             ]
-    except (ValueError, RuntimeError) as e:
-        logger.error(f"Search error: {e}")
+    except (ValueError, RuntimeError, Exception) as e:
+        # Catch all exceptions including OpenAI errors and fallback to simple search
+        logger.warning(f"Orchestrator search failed: {e}. Falling back to simple hybrid search.")
         # Fallback to simple search if orchestrator fails at runtime
         if hybrid_search_func is None:
             from src.search.hybrid_search import hybrid_search as fallback_search

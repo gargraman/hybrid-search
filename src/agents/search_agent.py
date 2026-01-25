@@ -10,7 +10,6 @@ from typing import Dict, List, Optional
 from asyncpg import Pool
 from qdrant_client import QdrantClient
 
-from beeai_framework import Agent, LLM  # type: ignore
 from config.settings import settings
 from pydantic import BaseModel
 
@@ -105,7 +104,7 @@ def _load_llm_context(max_files: int = 20, max_chars: int = 8000) -> str:
     return "\n\n".join(contexts)
 
 
-class SearchAgent(Agent):
+class SearchAgent:
     """
     Agent for performing semantic search with filters.
 
@@ -129,33 +128,8 @@ class SearchAgent(Agent):
         self.db_pool = db_pool
         self.qdrant_client = qdrant_client
 
-        # Initialize LLM client with proper SecretStr handling
-        if settings.deepseek_api_key:
-            llm = LLM(
-                model="deepseek-chat",
-                api_key=settings.deepseek_api_key.get_secret_value(),
-                base_url=settings.deepseek_base_url
-            )
-        elif settings.openai_api_key:
-            llm = LLM(
-                model="gpt-3.5-turbo",
-                api_key=settings.openai_api_key.get_secret_value(),
-                base_url=settings.openai_base_url
-            )
-        else:
-            raise ValueError("No API key set for LLM")
-
-        # Load LLM context from available restaurant JSON files
+        # Load LLM context from available restaurant JSON files for future use
         self.llm_context = _load_llm_context()
-
-        super().__init__(
-            llm=llm,
-            instructions=(
-                f"You are a search agent. Use the following restaurant data for context:\n"
-                f"{self.llm_context}\n"
-                f"Perform hybrid search on restaurant data based on keywords and filters."
-            )
-        )
 
     async def perform_search(
         self,

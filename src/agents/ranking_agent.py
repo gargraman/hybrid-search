@@ -1,4 +1,3 @@
-from beeai_framework import Agent, LLM
 from openai import OpenAI
 from config.settings import settings
 from pydantic import BaseModel
@@ -10,8 +9,11 @@ class RankedResult(BaseModel):
     metadata: dict
     relevance_score: float
 
-class RankingAgent(Agent):
+class RankingAgent:
+    """Agent for ranking search results by relevance."""
+
     def __init__(self):
+        """Initialize the ranking agent with LLM client."""
         if settings.deepseek_api_key:
             self.client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
             self.model = "deepseek-chat"
@@ -20,9 +22,6 @@ class RankingAgent(Agent):
             self.model = "gpt-3.5-turbo"
         else:
             raise ValueError("No API key set for LLM")
-        super().__init__(
-            instructions="Rank search results for relevance."
-        )
 
     async def rank_results(self, query: str, results: List[dict]) -> List[RankedResult]:
         ranked = []

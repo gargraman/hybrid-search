@@ -1,0 +1,202 @@
+{
+  "restaurant": {
+    "name": "Mediterranean Cafe",
+    "type": "Mediterranean Grill & Catering",
+    "address": {
+      "street": "702 State St",
+      "city": "New York",
+      "state": "NY",
+      "zip": "12224",
+      "country": "USA"
+    },
+    "contact": {
+      "phone": "829-561-2012",
+      "website": "https://mediterraneancafe.com/"
+    },
+    "location": {
+      "latitude": 40.7307,
+      "longitude": -73.9764
+    },
+    "description": "Chef-driven restaurant specializing in seasonal ingredients and regional flavors.",
+    "history": "Fresh Mediterranean cuisine with healthy, flavorful ingredients.",
+    "hours": {
+      "delivery_hours": "10am\u20139pm",
+      "takeout_hours": "12pm\u201311pm"
+    },
+    "catering_info": {
+      "on_ezcater_since": "October 20, 2011",
+      "delivery_fee": "USD 14.19 & up",
+      "delivery_minimum": "USD 79.63",
+      "delivery_method": "Customer pickup",
+      "group_order": true,
+      "rewards": "1X Rewards"
+    }
+  },
+  "ratings": {
+    "ezCater_rating": 4.3,
+    "ezCater_review_count": 2365,
+    "tripadvisor_rating": 4.4,
+    "tripadvisor_review_count": 1306,
+    "average_rating": 4.3,
+    "top_review_sites": [
+      "TripAdvisor",
+      "Yelp",
+      "Grubhub",
+      "Google"
+    ]
+  },
+  "top_reviews": [
+    {
+      "source": "ezCater",
+      "summary": "Always our go-to for corporate events.",
+      "date": "Nov 2025"
+    },
+    {
+      "source": "Yelp",
+      "summary": "Food was demolished. Everyone loved the Baklava.",
+      "date": "1 month ago"
+    },
+    {
+      "source": "ezCater",
+      "summary": "Huge catering delivery; friendly staff and fast order pickup.",
+      "date": "Jan 2024"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Great mediterranean but pricey.",
+      "date": "Recent"
+    },
+    {
+      "source": "Grubhub",
+      "summary": "Can't go wrong! Always order again, Baklava fresh and delicious.",
+      "date": "5 days ago"
+    },
+    {
+      "source": "Yelp",
+      "summary": "Whole company order for 200 people; food was demolished. Baklava raved about.",
+      "date": "2 weeks ago"
+    },
+    {
+      "source": "Yelp",
+      "summary": "Perfect for office catering. Chicken Shawarma Wrap was a hit!",
+      "date": "Recent"
+    },
+    {
+      "source": "Google",
+      "summary": "Can't go wrong! Always order again, Baklava fresh and delicious.",
+      "date": "Oct 2025"
+    },
+    {
+      "source": "TripAdvisor",
+      "summary": "Probably the best Mixed Grill Plate ever had. Generous portion.",
+      "date": "1 month ago"
+    },
+    {
+      "source": "ezCater",
+      "summary": "Always our go-to for corporate events.",
+      "date": "Feb 2025"
+    }
+  ],
+  "menu": {
+    "categories": [
+      "Mezze",
+      "Wraps",
+      "Plates",
+      "Salads",
+      "Desserts",
+      "Beverages"
+    ],
+    "items": [
+      {
+        "category": "Desserts",
+        "items": [
+          {
+            "category": "Desserts",
+            "name": "Baklava",
+            "price": 4.75
+          }
+        ]
+      },
+      {
+        "category": "Plates",
+        "items": [
+          {
+            "category": "Plates",
+            "name": "Mixed Grill Plate",
+            "description": "Chicken, lamb, kafta, rice, salad",
+            "price": 16.5
+          }
+        ]
+      },
+      {
+        "category": "Mezze",
+        "items": [
+          {
+            "category": "Mezze",
+            "name": "Falafel",
+            "description": "Crispy chickpea fritters with tahini",
+            "price": 7.75
+          },
+          {
+            "category": "Mezze",
+            "name": "Hummus Platter",
+            "description": "House-made hummus, pita, vegetables",
+            "price": 8.5
+          }
+        ]
+      },
+      {
+        "category": "Beverages",
+        "items": [
+          {
+            "category": "Beverages",
+            "name": "Mint Lemonade",
+            "price": 3.5
+          }
+        ]
+      },
+      {
+        "category": "Wraps",
+        "items": [
+          {
+            "category": "Wraps",
+            "name": "Falafel Wrap",
+            "description": "Falafel, hummus, vegetables, tahini",
+            "price": 10.5
+          },
+          {
+            "category": "Wraps",
+            "name": "Chicken Shawarma Wrap",
+            "description": "Marinated chicken, tahini, pickles, tomatoes",
+            "price": 11.5
+          }
+        ]
+      },
+      {
+        "category": "Salads",
+        "items": [
+          {
+            "category": "Salads",
+            "name": "Tabbouleh",
+            "description": "Bulgur, parsley, tomato, lemon, olive oil",
+            "price": 9.25
+          },
+          {
+            "category": "Salads",
+            "name": "Greek Salad",
+            "description": "Feta, olives, cucumber, tomato, vinaigrette",
+            "price": 10.0
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "source_url": "https://www.ezcater.com/catering/mediterranean-cafe-new-york",
+    "extraction_date": "2026-01-10",
+    "derived_fields": {
+      "average_rating": "Computed from ezCater & Tripadvisor values",
+      "top_review_sites_count": 4
+    }
+  }
+}

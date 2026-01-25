@@ -1,10 +1,12 @@
-from beeai_framework import Agent
 from typing import List, Dict
 from openai import OpenAI
 from config.settings import settings
 
-class QualityAgent(Agent):
+class QualityAgent:
+    """Agent for validating and filtering search results for relevance, completeness, and safety."""
+
     def __init__(self):
+        """Initialize the quality agent with LLM client."""
         if settings.deepseek_api_key:
             self.client = OpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
             self.model = "deepseek-chat"
@@ -13,7 +15,6 @@ class QualityAgent(Agent):
             self.model = "gpt-3.5-turbo"
         else:
             raise ValueError("No API key set for LLM")
-        super().__init__(instructions="Validate and filter search results for relevance, completeness, and safety.")
 
     async def filter_results(self, query: str, results: List[Dict]) -> List[Dict]:
         filtered = []
